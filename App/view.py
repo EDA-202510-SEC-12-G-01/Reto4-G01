@@ -1,5 +1,5 @@
 import sys
-import logic
+from App import logic
 
 
 def new_logic():

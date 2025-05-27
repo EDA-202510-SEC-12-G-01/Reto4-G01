@@ -37,6 +37,9 @@ def new_logic():
     return catalog
 
 def load_data(catalog, filename):
+    """
+    Carga los datos del reto - VERSIÓN CORREGIDA
+    """
     # Si no se proporciona filename, permitir selección
     if filename is None:
         print("\nArchivos disponibles:")
@@ -69,12 +72,26 @@ def load_data(catalog, filename):
                 delivery_person_id = row.get('Delivery_person_ID', 'Unknown').strip()
                 
                 # Coordenadas formateadas a 4 decimales
-                rest_lat = f"{float(row.get('Restaurant_latitude', '0')):.4f}"
-                rest_lon = f"{float(row.get('Restaurant_longitude', '0')):.4f}"
-                dest_lat = f"{float(row.get('Delivery_location_latitude', '0')):.4f}"
-                dest_lon = f"{float(row.get('Delivery_location_longitude', '0')):.4f}"
+                try:
+                    rest_lat = f"{float(row.get('Restaurant_latitude', '0')):.4f}"
+                    rest_lon = f"{float(row.get('Restaurant_longitude', '0')):.4f}"
+                    dest_lat = f"{float(row.get('Delivery_location_latitude', '0')):.4f}"
+                    dest_lon = f"{float(row.get('Delivery_location_longitude', '0')):.4f}"
+                except (ValueError, TypeError):
+                    continue
                 
-                time_taken = float(row.get('Time_taken', '0'))
+                # CORREGIDO: Usar el nombre correcto de la columna
+                time_taken = 0.0
+                try:
+                    time_field = row.get('Time_taken(min)', '0').strip()  # ✅ NOMBRE CORRECTO
+                    time_taken = float(time_field)
+                    
+                    # Validar que el tiempo sea razonable
+                    if time_taken < 0 or time_taken > 180:
+                        time_taken = 0.0
+                        
+                except (ValueError, TypeError):
+                    time_taken = 0.0
                 
                 # Crear identificadores de nodos
                 origin_node = f"{rest_lat}_{rest_lon}"
@@ -185,7 +202,6 @@ def load_data(catalog, filename):
     except Exception as e:
         print(f"Error al cargar datos: {str(e)}")
         return None
-
 # Funciones de consulta sobre el catálogo
 
 def get_data(catalog, id):
