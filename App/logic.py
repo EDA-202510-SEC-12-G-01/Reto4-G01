@@ -1,13 +1,24 @@
-import time
-import csv
+import sys
 import os
-from DataStructures.Graph import digraph as dg
-from DataStructures.Map import map_linear_probing as mp  
-from DataStructures.List import array_list as lt
-from DataStructures.Graph import bfs as bfs_alg
-from DataStructures.Stack import stack as st
+import csv
+import time
+import math
+from datetime import datetime
+import tabulate as tb
 
-def new_logic():
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+default_limit = 1000000
+sys.setrecursionlimit(default_limit * 10)
+
+from DataStructures.Graph import udgraph as gr
+from DataStructures.List import array_list as al
+from DataStructures.List.list_iterator import iterator
+from DataStructures.Map import map_linear_probing as lp
+
+data_dir = os.path.dirname(os.path.realpath("__file__")) + "\\Data\\"
+csv.field_size_limit(2147483647)
+
+def new_logic(size = 1000):
     """
     Crea el catalogo para almacenar las estructuras de datos
     """
@@ -408,6 +419,10 @@ def req_1(catalog, origin_id, dest_id):
     }
 
 # Funciones de requerimientos restantes (placeholder)
+def req_1(catalog):
+    """Retorna el resultado del requerimiento 1"""
+    pass
+
 def req_2(catalog):
     """Retorna el resultado del requerimiento 2"""
     pass

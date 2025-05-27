@@ -1,11 +1,25 @@
 
 import sys
-from App import logic
-from DataStructures.Map import map_linear_probing as mp
-from DataStructures.List import array_list as lt
+import os
+import tabulate as tb
+from datetime import datetime
+import tabulate as tb
 
+
+default_limit=100000
+sys.setrecursionlimit(default_limit*10)
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from DataStructures.List.list_iterator import iterator
+from DataStructures.List import array_list as al
+from App import logic
 
 def new_logic():
+    """
+        Se crea una instancia del controlador
+    """
+    #TODO: Llamar la función de la lógica donde se crean las estructuras de datos
     return logic.new_logic()
 
 def print_menu():
@@ -21,7 +35,7 @@ def print_menu():
     print("9- Ejecutar Requerimiento 8 (Bono)")
     print("0- Salir")
 
-def load_data(control):
+def load_data(control, archivo):
     """
     Carga los datos
     """
@@ -65,7 +79,7 @@ def load_data(control):
 
 def print_data(control, id):
     """
-        Función que imprime un dato dado su ID
+        Función que imprime la solución del Requerimiento 1 en consola
     """
     data = logic.get_data(control, id)
     if data:

@@ -26,6 +26,11 @@ def get_element(my_list, pos):
         raise IndexError("list index out of range")
     return my_list['elements'][pos]
 
+def contains(my_list, element):
+    if element in my_list['elements']:
+        return True
+    return False
+
 def delete_element(my_list, pos):
     if pos < 0 or pos >= my_list['size']:
         raise IndexError("list index out of range")
