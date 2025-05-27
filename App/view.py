@@ -1,10 +1,25 @@
+import time
 import sys
-from App import logic
-from DataStructures.Map import map_linear_probing as mp
-from DataStructures.List import array_list as lt
+import os
+import tabulate as tb
+from datetime import datetime
+import tabulate as tb
 
+
+default_limit=100000
+sys.setrecursionlimit(default_limit*10)
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from DataStructures.List.list_iterator import iterator
+from DataStructures.List import array_list as al
+from App import logic
 
 def new_logic():
+    """
+        Se crea una instancia del controlador
+    """
+    #TODO: Llamar la función de la lógica donde se crean las estructuras de datos
     return logic.new_logic()
 
 def print_menu():
@@ -20,66 +35,35 @@ def print_menu():
     print("9- Ejecutar Requerimiento 8 (Bono)")
     print("0- Salir")
 
-def load_data(control):
+def load_data(control, archivo):
     """
     Carga los datos
     """
-    # Realizar la carga de datos
-    print("Seleccionando archivo de datos...")
+    #TODO: Realizar la carga de datos
+    print()
+    print("INICIANDO LA CARGA DE DATOS")
+    print("========================================================================================================")
+    domicilios_total, domiciliarios_total, nodos_total, arcos_total, restaurantes_total, destinos_total, tiempo_promedio, tiempo_carga_ms = logic.load_data(control, archivo)
+    print("SE CARGARON LOS DATOS CORRECTAMENTE")
+    print("Tiempo de ejecución en ms: ", tiempo_carga_ms)
+    print("Número total de domicilios procesados: ", domicilios_total)
+    print("Número total de domiciliarios identificados: ", domiciliarios_total)
+    print("Número total de nodos en el grafo creado: ", nodos_total)
+    print("Número de arcos en el grafo creado: ", arcos_total)
+    print("Número de restaurantes identificados por su ubicación geográfica: ", restaurantes_total)
+    print("Número de ubicaciones donde han llegado los domiciliarios: ", destinos_total)
+    print("Promedio de tiempo de entrega de todos los domicilios procesados: ", round(tiempo_promedio, 3))    
+    print()
     
-    # Mostrar opciones de archivos
-    print("\nArchivos disponibles:")
-    print("1. deliverytime_20.csv  (~15,200 registros)")
-    print("2. deliverytime_40.csv  (~30,400 registros)")  
-    print("3. deliverytime_60.csv  (~45,600 registros)")
-    print("4. deliverytime_80.csv  (~60,800 registros)")
-    print("5. deliverytime_100.csv (~76,000 registros)")
-    
-    # Permitir selección del usuario
-    while True:
-        try:
-            choice = input("Selecciona una opción (1-5): ").strip()
-            
-            files = {
-                '1': 'Data/deliverytime_20.csv',
-                '2': 'Data/deliverytime_40.csv',
-                '3': 'Data/deliverytime_60.csv',
-                '4': 'Data/deliverytime_80.csv', 
-                '5': 'Data/deliverytime_100.csv'
-            }
-            
-            if choice in files:
-                filename = files[choice]
-                break
-            else:
-                print("Opción inválida. Por favor selecciona 1-5.")
-                
-        except KeyboardInterrupt:
-            print("\nOperación cancelada.")
-            return control
-    
-    # Cargar los datos usando la función de logic
-    updated_control = logic.load_data(control, filename)
-    
-    if updated_control:
-        print("¡Datos cargados exitosamente!")
-        return updated_control
-    else:
-        print("Error al cargar los datos.")
-        return control
-
-
-def print_data(control, id):
-    """
-        Función que imprime un dato dado su ID
-    """
-    #TODO: Realizar la función para imprimir un elemento
-    pass
 
 def print_req_1(control):
+    """
+        Función que imprime la solución del Requerimiento 1 en consola
+    """
+    # TODO: Imprimir el resultado del requerimiento 1
     pass
-    
-    
+
+
 def print_req_2(control):
     """
         Función que imprime la solución del Requerimiento 2 en consola
@@ -151,7 +135,8 @@ def main():
         inputs = input('Seleccione una opción para continuar\n')
         if int(inputs) == 1:
             print("Cargando información de los archivos ....\n")
-            data = load_data(control)
+            archivo = seleccionar_archivo()
+            load_data(control, archivo)
         elif int(inputs) == 2:
             print_req_1(control)
 
@@ -182,3 +167,28 @@ def main():
         else:
             print("Opción errónea, vuelva a elegir.\n")
     sys.exit(0)
+
+def seleccionar_archivo():
+    print("Escoja el archivo a cargar")
+    print("0- deliverytime_min.csv")
+    print("1- deliverytime_20.csv")
+    print("2- deliverytime_40.csv")
+    print("3- deliverytime_60.csv")
+    print("4- deliverytime_80.csv")
+    print("5- deliverytime_100.csv")
+    inputs = input('Seleccione una opción para continuar\n')
+    if int(inputs) == 0:
+        return "deliverytime_min.csv"
+    elif int(inputs) == 1:
+        return "deliverytime_20.csv"
+    elif int(inputs) == 2:
+        return "deliverytime_40.csv"
+    elif int(inputs) == 3:
+        return "deliverytime_60.csv"
+    elif int(inputs) == 4:
+        return "deliverytime_80.csv"
+    elif int(inputs) == 5:
+        return "deliverytime_100.csv"
+    else:
+        print("Opción errónea, vuelva a elegir.\n")
+        seleccionar_archivo()
