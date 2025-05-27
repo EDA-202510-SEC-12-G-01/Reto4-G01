@@ -1,3 +1,4 @@
+
 import sys
 from App import logic
 from DataStructures.Map import map_linear_probing as mp
@@ -73,10 +74,31 @@ def print_data(control, id):
     """
         Función que imprime un dato dado su ID
     """
-    #TODO: Realizar la función para imprimir un elemento
-    pass
+    data = logic.get_data(control, id)
+    if data:
+        print(f"\nInformación del domicilio {id}:")
+        print("-" * 40)
+        try:
+            delivery_person = mp.get(data, 'delivery_person_id')
+            origin = mp.get(data, 'origin')
+            destination = mp.get(data, 'destination')
+            time_taken = mp.get(data, 'time_taken')
+            order_type = mp.get(data, 'order_type')
+            
+            print(f"Domiciliario: {delivery_person}")
+            print(f"Origen: {origin}")
+            print(f"Destino: {destination}")
+            print(f"Tiempo: {time_taken} minutos")
+            print(f"Tipo de orden: {order_type}")
+        except:
+            print("Error al mostrar detalles del domicilio")
+    else:
+        print(f"No se encontró información para el ID: {id}")
 
 def print_req_1(control):
+    """
+    Función que imprime la solución del Requerimiento 1 en consola
+    """
     pass
     
     
@@ -136,49 +158,62 @@ def print_req_8(control):
     pass
 
 
-# Se crea la lógica asociado a la vista
-control = new_logic()
-
 # main del ejercicio
 def main():
     """
-    Menu principal
+    Menu principal - VERSIÓN CORREGIDA
     """
+    # ✅ SOLUCIÓN: Crear control localmente dentro de main()
+    control = new_logic()
+    
     working = True
     #ciclo del menu
     while working:
         print_menu()
-        inputs = input('Seleccione una opción para continuar\n')
-        if int(inputs) == 1:
-            print("Cargando información de los archivos ....\n")
-            data = load_data(control)
-        elif int(inputs) == 2:
-            print_req_1(control)
+        try:
+            inputs = input('Seleccione una opción para continuar\n')
+            option = int(inputs)
+            
+            if option == 1:
+                print("Cargando información de los archivos ....\n")
+                control = load_data(control)  # ✅ Ahora funciona correctamente
 
-        elif int(inputs) == 3:
-            print_req_2(control)
+            elif option == 2:
+                print_req_1(control)
 
-        elif int(inputs) == 4:
-            print_req_3(control)
+            elif option == 3:
+                print_req_2(control)
 
-        elif int(inputs) == 5:
-            print_req_4(control)
+            elif option == 4:
+                print_req_3(control)
 
-        elif int(inputs) == 6:
-            print_req_5(control)
+            elif option == 5:
+                print_req_4(control)
 
-        elif int(inputs) == 7:
-            print_req_6(control)
+            elif option == 6:
+                print_req_5(control)
 
-        elif int(inputs) == 8:
-            print_req_7(control)
+            elif option == 7:
+                print_req_6(control)
 
-        elif int(inputs) == 9:
-            print_req_8(control)
+            elif option == 8:
+                print_req_7(control)
 
-        elif int(inputs) == 0:
+            elif option == 9:
+                print_req_8(control)
+
+            elif option == 0:
+                working = False
+                print("\nGracias por utilizar el programa") 
+            else:
+                print("Opción errónea, vuelva a elegir.\n")
+                
+        except ValueError:
+            print("Por favor ingrese un número válido.\n")
+        except KeyboardInterrupt:
+            print("\n\nPrograma terminado por el usuario")
             working = False
-            print("\nGracias por utilizar el programa") 
-        else:
-            print("Opción errónea, vuelva a elegir.\n")
+        except Exception as e:
+            print(f"Error inesperado: {e}\n")
+            
     sys.exit(0)
