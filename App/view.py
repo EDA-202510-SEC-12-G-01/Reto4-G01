@@ -1,12 +1,9 @@
 import sys
+import logic
 
 
 def new_logic():
-    """
-        Se crea una instancia del controlador
-    """
-    #TODO: Llamar la función de la lógica donde se crean las estructuras de datos
-    pass
+    return logic.new_logic()
 
 def print_menu():
     print("Bienvenido")
@@ -25,8 +22,49 @@ def load_data(control):
     """
     Carga los datos
     """
-    #TODO: Realizar la carga de datos
-    pass
+    # Realizar la carga de datos
+    print("Seleccionando archivo de datos...")
+    
+    # Mostrar opciones de archivos
+    print("\nArchivos disponibles:")
+    print("1. deliverytime_20.csv  (~15,200 registros)")
+    print("2. deliverytime_40.csv  (~30,400 registros)")  
+    print("3. deliverytime_60.csv  (~45,600 registros)")
+    print("4. deliverytime_80.csv  (~60,800 registros)")
+    print("5. deliverytime_100.csv (~76,000 registros)")
+    
+    # Permitir selección del usuario
+    while True:
+        try:
+            choice = input("Selecciona una opción (1-5): ").strip()
+            
+            files = {
+                '1': 'Data/deliverytime_20.csv',
+                '2': 'Data/deliverytime_40.csv',
+                '3': 'Data/deliverytime_60.csv',
+                '4': 'Data/deliverytime_80.csv', 
+                '5': 'Data/deliverytime_100.csv'
+            }
+            
+            if choice in files:
+                filename = files[choice]
+                break
+            else:
+                print("Opción inválida. Por favor selecciona 1-5.")
+                
+        except KeyboardInterrupt:
+            print("\nOperación cancelada.")
+            return control
+    
+    # Cargar los datos usando la función de logic
+    updated_control = logic.load_data(control, filename)
+    
+    if updated_control:
+        print("¡Datos cargados exitosamente!")
+        return updated_control
+    else:
+        print("Error al cargar los datos.")
+        return control
 
 
 def print_data(control, id):
