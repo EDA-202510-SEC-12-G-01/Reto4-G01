@@ -30,7 +30,7 @@ def get_time():
 def delta_time(start, end):
     return float(end - start)
 
-def new_logic(size):
+def new_logic(size=1):
     """
     Crea el catálogo para almacenar las estructuras de datos
     """
