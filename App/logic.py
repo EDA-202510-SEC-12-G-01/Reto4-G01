@@ -322,8 +322,132 @@ def get_data(catalog, id):
     return None
 
 def req_1(catalog, origin_id, dest_id):
+    """
+    Requerimiento 1: Identificar un camino simple entre dos ubicaciones geográficas
+    """
+    start_time = time.perf_counter()
     
-        return 
+    # Obtener el grafo
+    graph = mp.get(catalog, 'graph')
+    
+    # Validaciones básicas
+    if not dg.contains_vertex(graph, origin_id):
+        return {
+            'path_exists': False,
+            'message': f'El punto de origen {origin_id} no existe en el grafo',
+            'execution_time': (time.perf_counter() - start_time) * 1000
+        }
+    
+    if not dg.contains_vertex(graph, dest_id):
+        return {
+            'path_exists': False,
+            'message': f'El punto de destino {dest_id} no existe en el grafo',
+            'execution_time': (time.perf_counter() - start_time) * 1000
+        }
+    
+    if origin_id == dest_id:
+        return {
+            'path_exists': False,
+            'message': 'El origen y destino no pueden ser iguales',
+            'execution_time': (time.perf_counter() - start_time) * 1000
+        }
+    
+    try:
+        # Ejecutar BFS
+        bfs_result = bfs_alg.bfs(graph, origin_id)
+        
+        # Verificar si existe camino
+        if not bfs_alg.has_path_to_bfs(bfs_result, dest_id):
+            return {
+                'path_exists': False,
+                'message': 'No existe un camino entre los puntos dados',
+                'execution_time': (time.perf_counter() - start_time) * 1000
+            }
+        
+        # Reconstruir el camino
+        path_stack = bfs_alg.path_to_bfs(bfs_result, dest_id)
+        path_sequence = lt.new_list()
+        
+        # Convertir stack a lista en orden correcto
+        while not st.is_empty(path_stack):
+            node = st.pop(path_stack)
+            lt.add_first(path_sequence, node)
+        
+        # Analizar el camino para extraer información
+        unique_deliverers = mp.new_map(100, 0.7)
+        restaurants_found = lt.new_list()
+        
+        # Recorrer cada nodo del camino
+        for i in range(lt.size(path_sequence)):
+            node_id = lt.get_element(path_sequence, i)
+            
+            # Obtener información del nodo
+            node_info = dg.get_vertex_information(graph, node_id)
+            if node_info is None:
+                continue
+            
+            # Si es restaurante, agregarlo a la lista
+            if mp.get(node_info, 'type') == 'restaurant':
+                lt.add_last(restaurants_found, node_id)
+            
+            # Agregar domiciliarios únicos
+            if mp.contains(node_info, 'deliverers'):
+                deliverers_list = mp.get(node_info, 'deliverers')
+                for j in range(lt.size(deliverers_list)):
+                    deliverer_id = lt.get_element(deliverers_list, j)
+                    if not mp.contains(unique_deliverers, deliverer_id):
+                        mp.put(unique_deliverers, deliverer_id, True)
+        
+        # Crear lista final de domiciliarios únicos
+        deliverers_list = lt.new_list()
+        deliverer_keys = mp.key_set(unique_deliverers)
+        for i in range(lt.size(deliverer_keys)):
+            deliverer_id = lt.get_element(deliverer_keys, i)
+            lt.add_last(deliverers_list, deliverer_id)
+        
+        # Calcular tiempo de ejecución
+        execution_time = (time.perf_counter() - start_time) * 1000
+        
+        # Retornar resultados
+        return {
+            'path_exists': True,
+            'execution_time': execution_time,
+            'path_length': lt.size(path_sequence),
+            'path_sequence': path_sequence,
+            'unique_deliverers': deliverers_list,
+            'restaurants_found': restaurants_found
+        }
+        
+    except Exception as e:
+        return {
+            'path_exists': False,
+            'error': f'Error ejecutando BFS: {str(e)}',
+            'execution_time': (time.perf_counter() - start_time) * 1000
+        }
+
+def get_restaurants_list(catalog):
+    """Retorna una lista de todos los restaurantes"""
+    if catalog is None:
+        return lt.new_list()
+    
+    try:
+        restaurants = mp.get(catalog, 'restaurants')
+        restaurant_keys = mp.key_set(restaurants)
+        return restaurant_keys
+    except:
+        return lt.new_list()
+
+def get_delivery_locations_list(catalog):
+    """Retorna una lista de todas las ubicaciones de entrega"""
+    if catalog is None:
+        return lt.new_list()
+    
+    try:
+        delivery_locations = mp.get(catalog, 'delivery_locations')
+        location_keys = mp.key_set(delivery_locations)
+        return location_keys
+    except:
+        return lt.new_list()
 
 # Funciones de requerimientos restantes (placeholder)
 def req_2(catalog):

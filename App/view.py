@@ -76,8 +76,138 @@ def print_data(control, id):
     #TODO: Realizar la función para imprimir un elemento
     pass
 
-def print_req_1(control):
-    pass
+def print_req_1(catalog):
+    """
+    Ejecuta el requerimiento 1: Encontrar camino entre dos ubicaciones
+    """
+    print("\n" + "="*60)
+    print("REQUERIMIENTO 1: CAMINO ENTRE UBICACIONES")
+    print("="*60)
+    
+    if catalog is None:
+        print("ERROR: Debe cargar los datos primero")
+        return
+    
+    try:
+        # Mostrar nodos de ejemplo
+        show_sample_nodes(catalog)
+        
+        # Solicitar puntos de origen y destino
+        print("\nIngrese los IDs de las ubicaciones (formato: latitud_longitud)")
+        print("Ejemplo: 0.0000_0.0000")
+        
+        origin_id = input("\nPunto de origen: ").strip()
+        if not origin_id:
+            print("Operación cancelada")
+            return
+        
+        dest_id = input("Punto de destino: ").strip()
+        if not dest_id:
+            print("Operación cancelada")
+            return
+        
+        print(f"\nBuscando camino desde {origin_id} hasta {dest_id}...")
+        
+        # Ejecutar requerimiento
+        result = logic.req_1(catalog, origin_id, dest_id)
+        
+        # Mostrar resultados
+        print_req_1_results(result)
+        
+    except Exception as e:
+        print(f"ERROR: Error ejecutando requerimiento 1: {str(e)}")
+
+def print_req_1_results(result):
+    """
+    Imprime los resultados del requerimiento 1
+    """
+    print("\n" + "="*60)
+    print("RESULTADOS DEL REQUERIMIENTO 1")
+    print("="*60)
+    
+    # Tiempo de ejecución
+    execution_time = result.get('execution_time', 0)
+    print(f"Tiempo de ejecución: {execution_time:.2f} ms")
+    
+    if not result.get('path_exists', False):
+        # No hay camino
+        message = result.get('message', 'No existe camino')
+        print(f"\nRESULTADO: {message}")
+        
+        if 'error' in result:
+            print(f"Error: {result['error']}")
+        return
+    
+    # Hay camino - mostrar información detallada
+    print("\nRESULTADO: Se encontró un camino válido")
+    print("-" * 60)
+    
+    # Cantidad de puntos geográficos
+    path_length = result.get('path_length', 0)
+    print(f"Cantidad de puntos geográficos en el camino: {path_length}")
+    
+    # Secuencia de ubicaciones
+    if 'path_sequence' in result:
+        path_sequence = result['path_sequence']
+        print(f"\nSecuencia de ubicaciones:")
+        for i in range(lt.size(path_sequence)):
+            node_id = lt.get_element(path_sequence, i)
+            coords = node_id.replace('_', ', ')
+            print(f"  {i+1}. ({coords})")
+    
+    # Domiciliarios únicos
+    if 'unique_deliverers' in result:
+        deliverers = result['unique_deliverers']
+        deliverers_count = lt.size(deliverers)
+        print(f"\nDomiciliarios que componen el camino (sin repetir): {deliverers_count}")
+        
+        if deliverers_count > 0:
+            print("IDs de domiciliarios:")
+            for i in range(lt.size(deliverers)):
+                deliverer_id = lt.get_element(deliverers, i)
+                print(f"  - {deliverer_id}")
+    
+    # Restaurantes encontrados
+    if 'restaurants_found' in result:
+        restaurants = result['restaurants_found']
+        restaurants_count = lt.size(restaurants)
+        print(f"\nRestaurantes encontrados en el camino: {restaurants_count}")
+        
+        if restaurants_count > 0:
+            print("Ubicaciones de restaurantes:")
+            for i in range(lt.size(restaurants)):
+                restaurant_id = lt.get_element(restaurants, i)
+                coords = restaurant_id.replace('_', ', ')
+                print(f"  - ({coords})")
+
+def show_sample_nodes(catalog):
+    """
+    Muestra algunos nodos de ejemplo del catálogo para facilitar las pruebas
+    """
+    if catalog is None:
+        return
+    
+    try:
+        # Mostrar algunos restaurantes
+        restaurants = logic.get_restaurants_list(catalog)
+        if lt.size(restaurants) > 0:
+            print("\nEjemplos de restaurantes disponibles:")
+            for i in range(min(3, lt.size(restaurants))):
+                restaurant_id = lt.get_element(restaurants, i)
+                coords = restaurant_id.replace('_', ', ')
+                print(f"  - {restaurant_id} (coordenadas: {coords})")
+        
+        # Mostrar algunas ubicaciones de entrega
+        delivery_locations = logic.get_delivery_locations_list(catalog)
+        if lt.size(delivery_locations) > 0:
+            print("\nEjemplos de ubicaciones de entrega disponibles:")
+            for i in range(min(3, lt.size(delivery_locations))):
+                location_id = lt.get_element(delivery_locations, i)
+                coords = location_id.replace('_', ', ')
+                print(f"  - {location_id} (coordenadas: {coords})")
+                
+    except Exception as e:
+        print(f"No se pudieron obtener ejemplos: {e}")
     
     
 def print_req_2(control):
@@ -151,7 +281,7 @@ def main():
         inputs = input('Seleccione una opción para continuar\n')
         if int(inputs) == 1:
             print("Cargando información de los archivos ....\n")
-            data = load_data(control)
+            control = load_data(control)  # Actualizar la variable control
         elif int(inputs) == 2:
             print_req_1(control)
 
