@@ -14,6 +14,7 @@ from DataStructures.Graph import udgraph as gr
 from DataStructures.List import array_list as al
 from DataStructures.List.list_iterator import iterator
 from DataStructures.Map import map_linear_probing as lp
+from DataStructures.Graph import dfs
 
 data_dir = os.path.dirname(os.path.realpath("__file__")) + "\\Data\\"
 csv.field_size_limit(2147483647)
@@ -144,9 +145,22 @@ def load_data(catalog: dict, filename: str):
     return domicilios_total, domiciliarios_total, nodos_total, arcos_total, restaurantes_total, destinos_total, tiempo_promedio, tiempo_carga_ms
 
 # Funciones de requerimientos restantes (placeholder)
-def req_1(catalog):
+def req_1(catalog, A, B):
     """Retorna el resultado del requerimiento 1"""
-    pass
+    start_time = get_time()
+    search = dfs.dfs(catalog['graph'], A)
+    if not dfs.has_path_to(B, search):
+        end_time = get_time()
+        time = delta_time(start_time, end_time)
+        return time, None, None
+    path = dfs.path_to(B, search)
+    for i in iterator(path):
+        my_node = lp.get(catalog['nodes'], i)
+        print(my_node)
+    end_time = get_time()
+    time = delta_time(start_time, end_time)
+    return time, path
+    
 
 def req_2(catalog):
     """Retorna el resultado del requerimiento 2"""
