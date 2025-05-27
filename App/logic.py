@@ -7,7 +7,7 @@ from datetime import datetime
 import tabulate as tb
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-default_limit = 1_000_000
+default_limit = 1000000
 sys.setrecursionlimit(default_limit * 10)
 
 from DataStructures.Graph import udgraph as gr
@@ -16,13 +16,13 @@ from DataStructures.List.list_iterator import iterator
 from DataStructures.Map import map_linear_probing as lp
 
 data_dir = os.path.dirname(os.path.realpath("__file__")) + "\\Data\\"
-csv.field_size_limit(2_147_483_647)        # 2 GB
+csv.field_size_limit(2147483647)
 
-# creación del catálogo
 def new_logic(size = 1000):
     """
     Crea el catalogo para almacenar las estructuras de datos
     """
+    #TODO: Llama a las funciónes de creación de las estructuras de datos
     return {
         'graph'                : gr.new_graph(size),
         'nodes'                : lp.new_map(size, 0.5),      # loc_id -> vertex
@@ -35,7 +35,8 @@ def new_logic(size = 1000):
         'total_delivery_time'  : 0.0,
         'total_deliveries'     : 0
     }
-
+    
+# Funciones para la carga de datos
 def format_location(latitude: str, longitude: str) -> str:
     try:
         lat = "{0:.4f}".format(float(latitude))
@@ -44,10 +45,8 @@ def format_location(latitude: str, longitude: str) -> str:
         lat, lon = "0.0000", "0.0000"
     return f"{lat}_{lon}"
 
-
 def vertex_deliveries(vertex_dict):
     return vertex_dict['value']['deliveries']
-
 
 def get_or_create_vertex(catalog: dict, loc_id: str):
     nodes = catalog['nodes']
@@ -61,7 +60,6 @@ def get_or_create_vertex(catalog: dict, loc_id: str):
     vtx = gr.get_vertex(graph, loc_id)
     lp.put(nodes, loc_id, vtx)
     return vtx
-
 
 def update_edge_weight(catalog: dict, u: str, v: str, new_weight: float):
     if u == v:
@@ -82,10 +80,9 @@ def update_edge_weight(catalog: dict, u: str, v: str, new_weight: float):
 # Funciones para la carga de datos
 def load_data(catalog: dict, filename: str):
     """
-    Procesa el CSV indicado y devuelve una tupla con:
-      (domicilios_total, domiciliarios_total, nodos, arcos,
-       restaurantes_unicos, destinos_unicos, tiempo_promedio, tiempo_carga_ms)
+    Carga los datos del reto
     """
+    # TODO: Realizar la carga de datos
     start_time = get_time()
     path = os.path.join(data_dir, filename)
 
