@@ -27,7 +27,6 @@ def load_data(control):
     """
     # Realizar la carga de datos
     print("Seleccionando archivo de datos...")
-    
     # Mostrar opciones de archivos
     print("\nArchivos disponibles:")
     print("1. deliverytime_20.csv  (~15,200 registros)")
@@ -35,7 +34,6 @@ def load_data(control):
     print("3. deliverytime_60.csv  (~45,600 registros)")
     print("4. deliverytime_80.csv  (~60,800 registros)")
     print("5. deliverytime_100.csv (~76,000 registros)")
-    
     # Permitir selección del usuario
     while True:
         try:
@@ -48,27 +46,22 @@ def load_data(control):
                 '4': 'Data/deliverytime_80.csv', 
                 '5': 'Data/deliverytime_100.csv'
             }
-            
             if choice in files:
                 filename = files[choice]
                 break
             else:
-                print("Opción inválida. Por favor selecciona 1-5.")
-                
+                print("Opción inválida. Por favor selecciona 1-5.") 
         except KeyboardInterrupt:
             print("\nOperación cancelada.")
             return control
-    
     # Cargar los datos usando la función de logic
     updated_control = logic.load_data(control, filename)
-    
     if updated_control:
         print("¡Datos cargados exitosamente!")
         return updated_control
     else:
         print("Error al cargar los datos.")
         return control
-
 
 def print_data(control, id):
     """
@@ -84,7 +77,6 @@ def print_data(control, id):
             destination = mp.get(data, 'destination')
             time_taken = mp.get(data, 'time_taken')
             order_type = mp.get(data, 'order_type')
-            
             print(f"Domiciliario: {delivery_person}")
             print(f"Origen: {origin}")
             print(f"Destino: {destination}")
@@ -95,11 +87,81 @@ def print_data(control, id):
     else:
         print(f"No se encontró información para el ID: {id}")
 
+# Actualizar view.py con esta función mejorada
 def print_req_1(control):
     """
     Función que imprime la solución del Requerimiento 1 en consola
     """
-    pass
+    print("\n" + "="*60)
+    print("REQUERIMIENTO 1: CAMINO SIMPLE ENTRE UBICACIONES")
+    print("="*60)
+    try:
+        # Solicitar parámetros
+        print("Ingrese los IDs de las ubicaciones:")
+        origin_id = input(" Nodo origen: ").strip()
+        dest_id = input(" Nodo destino: ").strip()
+        
+        if not origin_id or not dest_id:
+            print(" Los IDs no pueden estar vacíos")
+            return
+        print(f"\n Buscando camino desde '{origin_id}' hasta '{dest_id}'...")
+        # Ejecutar requerimiento
+        result = logic.req_1(control, origin_id, dest_id)
+        # Mostrar resultados
+        print("\n" + "="*50)
+        print(" RESULTADOS")
+        print("="*50)
+        
+        print(f"  Tiempo de ejecución: {result['execution_time']:.2f} ms")
+        
+        if result['found']:
+            print(" ¡Camino encontrado!")
+            print(f"📏 Cantidad de puntos en el camino: {result['path_length']}")
+            
+            # Mostrar secuencia del camino
+            print(f"\n  SECUENCIA DEL CAMINO:")
+            path = result['path_sequence']
+            path_size = lt.size(path)  
+            
+            for i in range(path_size):  
+                node = lt.get_element(path, i) 
+                if i == 0:
+                    print(f"    ORIGEN: {node}")
+                elif i == path_size - 1:
+                    print(f"    DESTINO: {node}")
+                else:
+                    print(f"   {i+1:2d}. {node}")
+            # Mostrar domiciliarios únicos
+            deliverers = result['unique_deliverers']
+            deliverers_count = lt.size(deliverers) 
+            print(f"\n DOMICILIARIOS EN EL CAMINO ({deliverers_count} únicos):")
+            
+            max_show = min(10, deliverers_count)
+            for i in range(max_show): 
+                deliverer = lt.get_element(deliverers, i)  
+                print(f"   • {deliverer}")
+            if deliverers_count > 10:
+                print(f"   ... y {deliverers_count - 10} más")
+            # Mostrar restaurantes
+            restaurants = result['restaurants_found']
+            restaurants_count = lt.size(restaurants)  
+            
+            if restaurants_count > 0:
+                print(f"\n  RESTAURANTES ENCONTRADOS ({restaurants_count}):")
+                for i in range(restaurants_count): 
+                    restaurant = lt.get_element(restaurants, i) 
+                    print(f"   • {restaurant}")
+            else:
+                print(f"\n  No se encontraron restaurantes en el camino") 
+        else:
+            print(" No se encontró camino")
+            if 'error' in result:
+                print(f" Motivo: {result['error']}")
+        print("="*50)
+    except Exception as e:
+        print(f" Error en requerimiento 1: {e}")
+        import traceback
+        traceback.print_exc()
     
     
 def print_req_2(control):
