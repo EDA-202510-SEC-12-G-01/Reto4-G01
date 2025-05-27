@@ -6,39 +6,39 @@ from DataStructures.Map import map_linear_probing as mp
 from DataStructures.List import array_list as lt
 
 def new_logic():
-    """
-    Crea el catalogo para almacenar las estructuras de datos
-    """
-    catalog = {
-        # Grafo principal no dirigido
-        'graph': dg.new_graph(10000),
-        
-        # Mapas para almacenar información
-        'deliveries': mp.new_map(5000, 0.7),
-        'delivery_persons': mp.new_map(1000, 0.7),
-        'restaurants': mp.new_map(2000, 0.7),
-        'delivery_locations': mp.new_map(3000, 0.7),
-        'node_deliverers': mp.new_map(5000, 0.7),
-        'edge_times': mp.new_map(10000, 0.7),
-        'deliverer_last_delivery': mp.new_map(1000, 0.7),
-        
-        # Estadísticas
-        'stats': {
-            'total_deliveries': 0,
-            'total_delivery_persons': 0,
-            'total_nodes': 0,
-            'total_edges': 0,
-            'total_restaurants': 0,
-            'total_delivery_locations': 0,
-            'total_delivery_time': 0.0,
-            'avg_delivery_time': 0.0
-        }
-    }
+    # Crear catálogo principal usando mapa
+    catalog = mp.new_map(20, 0.7)
+    
+    # Crear grafo principal no dirigido
+    mp.put(catalog, 'graph', dg.new_graph(10000))
+    
+    # Crear mapas para almacenar información
+    mp.put(catalog, 'deliveries', mp.new_map(5000, 0.7))
+    mp.put(catalog, 'delivery_persons', mp.new_map(1000, 0.7))
+    mp.put(catalog, 'restaurants', mp.new_map(2000, 0.7))
+    mp.put(catalog, 'delivery_locations', mp.new_map(3000, 0.7))
+    mp.put(catalog, 'node_deliverers', mp.new_map(5000, 0.7))
+    mp.put(catalog, 'edge_times', mp.new_map(10000, 0.7))
+    mp.put(catalog, 'deliverer_last_delivery', mp.new_map(1000, 0.7))
+    
+    # Crear mapa de estadísticas usando tus mapas
+    stats = mp.new_map(15, 0.7)
+    mp.put(stats, 'total_deliveries', 0)
+    mp.put(stats, 'total_delivery_persons', 0)
+    mp.put(stats, 'total_nodes', 0)
+    mp.put(stats, 'total_edges', 0)
+    mp.put(stats, 'total_restaurants', 0)
+    mp.put(stats, 'total_delivery_locations', 0)
+    mp.put(stats, 'total_delivery_time', 0.0)
+    mp.put(stats, 'avg_delivery_time', 0.0)
+    
+    mp.put(catalog, 'stats', stats)
+    
     return catalog
 
 def load_data(catalog, filename):
     """
-    Carga los datos del reto - VERSIÓN CORREGIDA
+    Carga los datos del reto
     """
     # Si no se proporciona filename, permitir selección
     if filename is None:
@@ -50,14 +50,19 @@ def load_data(catalog, filename):
         print("5. Data/deliverytime_100.csv")
         
         choice = input("Selecciona archivo (1-5): ").strip()
-        files = {
-            '1': 'Data/deliverytime_20.csv',
-            '2': 'Data/deliverytime_40.csv',
-            '3': 'Data/deliverytime_60.csv', 
-            '4': 'Data/deliverytime_80.csv',
-            '5': 'Data/deliverytime_100.csv'
-        }
-        filename = files.get(choice, 'Data/deliverytime_20.csv')
+        
+        # Crear mapa de archivos usando tus mapas
+        files = mp.new_map(10, 0.7)
+        mp.put(files, '1', 'Data/deliverytime_20.csv')
+        mp.put(files, '2', 'Data/deliverytime_40.csv')
+        mp.put(files, '3', 'Data/deliverytime_60.csv')
+        mp.put(files, '4', 'Data/deliverytime_80.csv')
+        mp.put(files, '5', 'Data/deliverytime_100.csv')
+        
+        if mp.contains(files, choice):
+            filename = mp.get(files, choice)
+        else:
+            filename = mp.get(files, '1')  # Por defecto el primero
     
     print(f"Cargando datos desde: {filename}")
     start_time = time.time()
@@ -65,6 +70,16 @@ def load_data(catalog, filename):
     try:
         with open(filename, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
+            
+            # Obtener referencias a los mapas
+            graph = mp.get(catalog, 'graph')
+            deliveries = mp.get(catalog, 'deliveries')
+            delivery_persons = mp.get(catalog, 'delivery_persons')
+            restaurants = mp.get(catalog, 'restaurants')
+            delivery_locations = mp.get(catalog, 'delivery_locations')
+            edge_times = mp.get(catalog, 'edge_times')
+            deliverer_last_delivery = mp.get(catalog, 'deliverer_last_delivery')
+            stats = mp.get(catalog, 'stats')
             
             for row in reader:
                 # Procesar cada registro
@@ -83,7 +98,7 @@ def load_data(catalog, filename):
                 # CORREGIDO: Usar el nombre correcto de la columna
                 time_taken = 0.0
                 try:
-                    time_field = row.get('Time_taken(min)', '0').strip()  # ✅ NOMBRE CORRECTO
+                    time_field = row.get('Time_taken(min)', '0').strip()
                     time_taken = float(time_field)
                     
                     # Validar que el tiempo sea razonable
@@ -98,85 +113,140 @@ def load_data(catalog, filename):
                 dest_node = f"{dest_lat}_{dest_lon}"
                 
                 # Agregar nodos si no existen
-                if not dg.contains_vertex(catalog['graph'], origin_node):
-                    dg.insert_vertex(catalog['graph'], origin_node, {
-                        'latitude': rest_lat, 'longitude': rest_lon, 'type': 'restaurant'
-                    })
-                    mp.put(catalog['restaurants'], origin_node, True)
-                    catalog['stats']['total_restaurants'] += 1
+                if not dg.contains_vertex(graph, origin_node):
+                    # Crear información del nodo usando mapa
+                    node_info = mp.new_map(10, 0.7)
+                    mp.put(node_info, 'latitude', rest_lat)
+                    mp.put(node_info, 'longitude', rest_lon)
+                    mp.put(node_info, 'type', 'restaurant')
+                    mp.put(node_info, 'deliverers', lt.new_list())
+                    
+                    dg.insert_vertex(graph, origin_node, node_info)
+                    mp.put(restaurants, origin_node, True)
+                    
+                    # Incrementar contador
+                    current_count = mp.get(stats, 'total_restaurants')
+                    mp.put(stats, 'total_restaurants', current_count + 1)
                 
-                if not dg.contains_vertex(catalog['graph'], dest_node):
-                    dg.insert_vertex(catalog['graph'], dest_node, {
-                        'latitude': dest_lat, 'longitude': dest_lon, 'type': 'delivery'
-                    })
-                    mp.put(catalog['delivery_locations'], dest_node, True)
-                    catalog['stats']['total_delivery_locations'] += 1
+                if not dg.contains_vertex(graph, dest_node):
+                    # Crear información del nodo usando mapa
+                    node_info = mp.new_map(10, 0.7)
+                    mp.put(node_info, 'latitude', dest_lat)
+                    mp.put(node_info, 'longitude', dest_lon)
+                    mp.put(node_info, 'type', 'delivery')
+                    mp.put(node_info, 'deliverers', lt.new_list())
+                    
+                    dg.insert_vertex(graph, dest_node, node_info)
+                    mp.put(delivery_locations, dest_node, True)
+                    
+                    # Incrementar contador
+                    current_count = mp.get(stats, 'total_delivery_locations')
+                    mp.put(stats, 'total_delivery_locations', current_count + 1)
                 
                 # Agregar/actualizar arco entre origen y destino
                 edge_key = f"{min(origin_node, dest_node)}_{max(origin_node, dest_node)}"
-                if mp.contains(catalog['edge_times'], edge_key):
-                    # Actualizar promedio
-                    edge_data = mp.get(catalog['edge_times'], edge_key)
-                    edge_data['count'] += 1
-                    edge_data['total_time'] += time_taken
-                    edge_data['avg_time'] = edge_data['total_time'] / edge_data['count']
-                    dg.add_edge(catalog['graph'], origin_node, dest_node, edge_data['avg_time'])
+                if mp.contains(edge_times, edge_key):
+                    # Actualizar promedio usando mapa
+                    edge_data = mp.get(edge_times, edge_key)
+                    current_count = mp.get(edge_data, 'count')
+                    current_total = mp.get(edge_data, 'total_time')
+                    
+                    new_count = current_count + 1
+                    new_total_time = current_total + time_taken
+                    new_avg_time = new_total_time / new_count
+                    
+                    mp.put(edge_data, 'count', new_count)
+                    mp.put(edge_data, 'total_time', new_total_time)
+                    mp.put(edge_data, 'avg_time', new_avg_time)
+                    
+                    dg.add_edge(graph, origin_node, dest_node, new_avg_time)
                 else:
-                    # Nuevo arco
-                    mp.put(catalog['edge_times'], edge_key, {
-                        'count': 1, 'total_time': time_taken, 'avg_time': time_taken
-                    })
-                    dg.add_edge(catalog['graph'], origin_node, dest_node, time_taken)
+                    # Nuevo arco usando mapa
+                    edge_data = mp.new_map(5, 0.7)
+                    mp.put(edge_data, 'count', 1)
+                    mp.put(edge_data, 'total_time', time_taken)
+                    mp.put(edge_data, 'avg_time', time_taken)
+                    
+                    mp.put(edge_times, edge_key, edge_data)
+                    dg.add_edge(graph, origin_node, dest_node, time_taken)
                 
                 # Arco secuencial por domiciliario
-                if mp.contains(catalog['deliverer_last_delivery'], delivery_person_id):
-                    last_dest = mp.get(catalog['deliverer_last_delivery'], delivery_person_id)
+                if mp.contains(deliverer_last_delivery, delivery_person_id):
+                    last_dest = mp.get(deliverer_last_delivery, delivery_person_id)
                     if last_dest != dest_node:
                         seq_edge_key = f"{min(last_dest, dest_node)}_{max(last_dest, dest_node)}"
-                        if mp.contains(catalog['edge_times'], seq_edge_key):
-                            edge_data = mp.get(catalog['edge_times'], seq_edge_key)
-                            edge_data['count'] += 1
-                            edge_data['total_time'] += time_taken
-                            edge_data['avg_time'] = edge_data['total_time'] / edge_data['count']
-                            dg.add_edge(catalog['graph'], last_dest, dest_node, edge_data['avg_time'])
+                        if mp.contains(edge_times, seq_edge_key):
+                            edge_data = mp.get(edge_times, seq_edge_key)
+                            current_count = mp.get(edge_data, 'count')
+                            current_total = mp.get(edge_data, 'total_time')
+                            
+                            new_count = current_count + 1
+                            new_total_time = current_total + time_taken
+                            new_avg_time = new_total_time / new_count
+                            
+                            mp.put(edge_data, 'count', new_count)
+                            mp.put(edge_data, 'total_time', new_total_time)
+                            mp.put(edge_data, 'avg_time', new_avg_time)
+                            
+                            dg.add_edge(graph, last_dest, dest_node, new_avg_time)
                         else:
-                            mp.put(catalog['edge_times'], seq_edge_key, {
-                                'count': 1, 'total_time': time_taken, 'avg_time': time_taken
-                            })
-                            dg.add_edge(catalog['graph'], last_dest, dest_node, time_taken)
+                            edge_data = mp.new_map(5, 0.7)
+                            mp.put(edge_data, 'count', 1)
+                            mp.put(edge_data, 'total_time', time_taken)
+                            mp.put(edge_data, 'avg_time', time_taken)
+                            
+                            mp.put(edge_times, seq_edge_key, edge_data)
+                            dg.add_edge(graph, last_dest, dest_node, time_taken)
                 
-                mp.put(catalog['deliverer_last_delivery'], delivery_person_id, dest_node)
+                mp.put(deliverer_last_delivery, delivery_person_id, dest_node)
                 
                 # Agregar domiciliario si es nuevo
-                if not mp.contains(catalog['delivery_persons'], delivery_person_id):
-                    mp.put(catalog['delivery_persons'], delivery_person_id, {
-                        'age': row.get('Delivery_person_Age', 'Unknown'),
-                        'ratings': row.get('Delivery_person_Ratings', 'Unknown'),
-                        'vehicle': row.get('Type_of_vehicle', 'Unknown')
-                    })
-                    catalog['stats']['total_delivery_persons'] += 1
+                if not mp.contains(delivery_persons, delivery_person_id):
+                    # Crear información del domiciliario usando mapa
+                    person_info = mp.new_map(10, 0.7)
+                    mp.put(person_info, 'age', row.get('Delivery_person_Age', 'Unknown'))
+                    mp.put(person_info, 'ratings', row.get('Delivery_person_Ratings', 'Unknown'))
+                    mp.put(person_info, 'vehicle', row.get('Type_of_vehicle', 'Unknown'))
+                    mp.put(person_info, 'delivery_count', 1)
+                    
+                    mp.put(delivery_persons, delivery_person_id, person_info)
+                    
+                    # Incrementar contador
+                    current_count = mp.get(stats, 'total_delivery_persons')
+                    mp.put(stats, 'total_delivery_persons', current_count + 1)
+                else:
+                    # Actualizar contador de domicilios
+                    person_info = mp.get(delivery_persons, delivery_person_id)
+                    current_deliveries = mp.get(person_info, 'delivery_count')
+                    mp.put(person_info, 'delivery_count', current_deliveries + 1)
                 
-                # Guardar domicilio
-                mp.put(catalog['deliveries'], delivery_id, {
-                    'delivery_person_id': delivery_person_id,
-                    'origin': origin_node,
-                    'destination': dest_node,
-                    'time_taken': time_taken,
-                    'order_type': row.get('Type_of_order', 'Unknown')
-                })
+                # Guardar domicilio usando mapa
+                delivery_info = mp.new_map(10, 0.7)
+                mp.put(delivery_info, 'delivery_person_id', delivery_person_id)
+                mp.put(delivery_info, 'origin', origin_node)
+                mp.put(delivery_info, 'destination', dest_node)
+                mp.put(delivery_info, 'time_taken', time_taken)
+                mp.put(delivery_info, 'order_type', row.get('Type_of_order', 'Unknown'))
+                
+                mp.put(deliveries, delivery_id, delivery_info)
                 
                 # Actualizar estadísticas
-                catalog['stats']['total_deliveries'] += 1
-                catalog['stats']['total_delivery_time'] += time_taken
+                current_total_deliveries = mp.get(stats, 'total_deliveries')
+                current_total_time = mp.get(stats, 'total_delivery_time')
+                
+                mp.put(stats, 'total_deliveries', current_total_deliveries + 1)
+                mp.put(stats, 'total_delivery_time', current_total_time + time_taken)
         
         # Calcular estadísticas finales
-        catalog['stats']['total_nodes'] = dg.order(catalog['graph'])
-        catalog['stats']['total_edges'] = dg.size(catalog['graph'])
+        mp.put(stats, 'total_nodes', dg.order(graph))
+        mp.put(stats, 'total_edges', dg.size(graph))
         
-        if catalog['stats']['total_deliveries'] > 0:
-            catalog['stats']['avg_delivery_time'] = (
-                catalog['stats']['total_delivery_time'] / catalog['stats']['total_deliveries']
-            )
+        total_deliveries = mp.get(stats, 'total_deliveries')
+        total_time = mp.get(stats, 'total_delivery_time')
+        
+        if total_deliveries > 0:
+            avg_time = total_time / total_deliveries
+            mp.put(stats, 'avg_delivery_time', avg_time)
         
         end_time = time.time()
         
@@ -185,13 +255,13 @@ def load_data(catalog, filename):
         print("="*60)
         print("RESUMEN DE CARGA DE DATOS")
         print("="*60)
-        print(f"Número total de domicilios procesados: {catalog['stats']['total_deliveries']:,}")
-        print(f"Número total de domiciliarios identificados: {catalog['stats']['total_delivery_persons']:,}")
-        print(f"Número total de nodos en el grafo: {catalog['stats']['total_nodes']:,}")
-        print(f"Número de arcos en el grafo: {catalog['stats']['total_edges']:,}")
-        print(f"Número de restaurantes identificados: {catalog['stats']['total_restaurants']:,}")
-        print(f"Número de ubicaciones de entrega: {catalog['stats']['total_delivery_locations']:,}")
-        print(f"Promedio de tiempo de entrega: {catalog['stats']['avg_delivery_time']:.2f} minutos")
+        print(f"Número total de domicilios procesados: {mp.get(stats, 'total_deliveries'):,}")
+        print(f"Número total de domiciliarios identificados: {mp.get(stats, 'total_delivery_persons'):,}")
+        print(f"Número total de nodos en el grafo: {mp.get(stats, 'total_nodes'):,}")
+        print(f"Número de arcos en el grafo: {mp.get(stats, 'total_edges'):,}")
+        print(f"Número de restaurantes identificados: {mp.get(stats, 'total_restaurants'):,}")
+        print(f"Número de ubicaciones de entrega: {mp.get(stats, 'total_delivery_locations'):,}")
+        print(f"Promedio de tiempo de entrega: {mp.get(stats, 'avg_delivery_time'):.2f} minutos")
         print("="*60)
         
         return catalog
