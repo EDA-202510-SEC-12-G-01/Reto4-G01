@@ -8,6 +8,9 @@ from DataStructures.Graph import bfs as bfs_alg
 from DataStructures.Stack import stack as st
 
 def new_logic():
+    """
+    Crea el catalogo para almacenar las estructuras de datos
+    """
     # Crear catálogo principal usando mapa
     catalog = mp.new_map(20, 0.7)
     
@@ -81,6 +84,7 @@ def load_data(catalog, filename):
             delivery_locations = mp.get(catalog, 'delivery_locations')
             edge_times = mp.get(catalog, 'edge_times')
             deliverer_last_delivery = mp.get(catalog, 'deliverer_last_delivery')
+            node_deliverers = mp.get(catalog, 'node_deliverers')
             stats = mp.get(catalog, 'stats')
             
             for row in reader:
@@ -144,6 +148,10 @@ def load_data(catalog, filename):
                     # Incrementar contador
                     current_count = mp.get(stats, 'total_delivery_locations')
                     mp.put(stats, 'total_delivery_locations', current_count + 1)
+                
+                # CORREGIDO: Agregar domiciliario a ambos nodos
+                _add_deliverer_to_node(graph, node_deliverers, origin_node, delivery_person_id)
+                _add_deliverer_to_node(graph, node_deliverers, dest_node, delivery_person_id)
                 
                 # Agregar/actualizar arco entre origen y destino
                 edge_key = f"{min(origin_node, dest_node)}_{max(origin_node, dest_node)}"
@@ -274,198 +282,84 @@ def load_data(catalog, filename):
     except Exception as e:
         print(f"Error al cargar datos: {str(e)}")
         return None
-# Funciones de consulta sobre el catálogo
 
+def _add_deliverer_to_node(graph, node_deliverers, node_id, delivery_person_id):
+    """
+    Agrega un domiciliario a la lista de un nodo - FUNCIÓN HELPER CORREGIDA
+    """
+    deliverer_key = f"{node_id}_{delivery_person_id}"
+    
+    # Verificar si ya se agregó este domiciliario a este nodo
+    if not mp.contains(node_deliverers, deliverer_key):
+        mp.put(node_deliverers, deliverer_key, True)
+        
+        # Obtener información del nodo y agregar domiciliario a su lista
+        try:
+            node_info = dg.get_vertex_information(graph, node_id)
+            if node_info and mp.contains(node_info, 'deliverers'):
+                deliverers_list = mp.get(node_info, 'deliverers')
+                
+                # Verificar si ya está en la lista
+                found = False
+                for i in range(lt.size(deliverers_list)):
+                    if lt.get_element(deliverers_list, i) == delivery_person_id:
+                        found = True
+                        break
+                
+                if not found:
+                    lt.add_last(deliverers_list, delivery_person_id)
+        except Exception:
+            pass  # Si hay error, continuar
+
+# Funciones de consulta sobre el catálogo
 def get_data(catalog, id):
     """
     Retorna un dato por su ID.
     """
-    #TODO: Consulta en las Llamar la función del modelo para obtener un dato
-    pass
-
+    deliveries = mp.get(catalog, 'deliveries')
+    if mp.contains(deliveries, id):
+        return mp.get(deliveries, id)
+    return None
 
 def req_1(catalog, origin_id, dest_id):
-    start_time = time.perf_counter()
-    result = mp.new_map(10, 0.7)
-    graph = mp.get(catalog, 'graph')
-    if not dg.contains_vertex(graph, origin_id):
-        mp.put(result, 'error', f"El punto de origen '{origin_id}' no existe en el grafo")
-        mp.put(result, 'execution_time', 0.0)
-        return result
-    if not dg.contains_vertex(graph, dest_id):
-        mp.put(result, 'error', f"El punto de destino '{dest_id}' no existe en el grafo")
-        mp.put(result, 'execution_time', 0.0)
-        return result
-    if origin_id == dest_id:
-        mp.put(result, 'error', "El origen y destino son el mismo punto")
-        mp.put(result, 'execution_time', 0.0)
-        return result
-    try:
-        bfs_result = bfs_alg.bfs(graph, origin_id)
-        if not bfs_alg.has_path_to_bfs(bfs_result, dest_id):
-            mp.put(result, 'path_exists', False)
-            mp.put(result, 'message', f"No existe camino entre '{origin_id}' y '{dest_id}'")
-            end_time = time.perf_counter()
-            mp.put(result, 'execution_time', (end_time - start_time) * 1000)  # En milisegundos
-            return result
-        path_stack = bfs_alg.path_to_bfs(bfs_result, dest_id)
-        path_list = lt.new_list()
-        while not st.is_empty(path_stack):
-            node = st.pop(path_stack)
-            lt.add_first(path_list, node)
-        path_info = _analyze_path(catalog, path_list)
-        mp.put(result, 'path_exists', True)
-        mp.put(result, 'origin', origin_id)
-        mp.put(result, 'destination', dest_id)
-        mp.put(result, 'path_length', lt.size(path_list))
-        mp.put(result, 'path_sequence', path_list)
-        mp.put(result, 'deliverers', mp.get(path_info, 'deliverers'))
-        mp.put(result, 'restaurants', mp.get(path_info, 'restaurants'))
-        mp.put(result, 'total_deliverers', mp.get(path_info, 'total_deliverers'))
-        mp.put(result, 'total_restaurants', mp.get(path_info, 'total_restaurants'))
-        end_time = time.perf_counter()
-        mp.put(result, 'execution_time', (end_time - start_time) * 1000)  # En milisegundos
-        return result
-        
-    except Exception as e:
-        mp.put(result, 'error', f"Error ejecutando BFS: {str(e)}")
-        end_time = time.perf_counter()
-        mp.put(result, 'execution_time', (end_time - start_time) * 1000)
-        return result
+    
+        return 
 
-def _analyze_path(catalog, path_list):
-    graph = mp.get(catalog, 'graph')
-    path_info = mp.new_map(10, 0.7)
-    deliverers_set = mp.new_map(100, 0.7)
-    restaurants_set = mp.new_map(50, 0.7)
-    deliverers_list = lt.new_list()
-    restaurants_list = lt.new_list()
-    for i in range(lt.size(path_list)):
-        node_id = lt.get_element(path_list, i)
-        try:
-            node_info = dg.get_vertex_information(graph, node_id)
-            node_type = mp.get(node_info, 'type')
-            if node_type == 'restaurant' and not mp.contains(restaurants_set, node_id):
-                mp.put(restaurants_set, node_id, True)
-                restaurant_info = mp.new_map(5, 0.7)
-                mp.put(restaurant_info, 'id', node_id)
-                mp.put(restaurant_info, 'latitude', mp.get(node_info, 'latitude'))
-                mp.put(restaurant_info, 'longitude', mp.get(node_info, 'longitude'))
-                lt.add_last(restaurants_list, restaurant_info)
-            if mp.contains(node_info, 'deliverers'):
-                deliverers_in_node = mp.get(node_info, 'deliverers')
-                for j in range(lt.size(deliverers_in_node)):
-                    deliverer_id = lt.get_element(deliverers_in_node, j)
-                    if not mp.contains(deliverers_set, deliverer_id):
-                        mp.put(deliverers_set, deliverer_id, True)
-                        lt.add_last(deliverers_list, deliverer_id)
-        except Exception:
-            continue
-    mp.put(path_info, 'deliverers', deliverers_list)
-    mp.put(path_info, 'restaurants', restaurants_list)
-    mp.put(path_info, 'total_deliverers', lt.size(deliverers_list))
-    mp.put(path_info, 'total_restaurants', lt.size(restaurants_list))
-    return path_info
-
-def _format_node_id(latitude, longitude):
-    try:
-        lat = f"{float(latitude):.4f}"
-        lon = f"{float(longitude):.4f}"
-        return f"{lat}_{lon}"
-    except (ValueError, TypeError):
-        return None
-
-def get_available_nodes_sample(catalog, limit=10):
-    graph = mp.get(catalog, 'graph')
-    vertices = dg.vertices(graph)
-    sample_list = lt.new_list()
-    count = 0
-    for i in range(lt.size(vertices)):
-        if count >= limit:
-            break
-        node_id = lt.get_element(vertices, i)
-        try:
-            node_info = dg.get_vertex_information(graph, node_id)
-            node_type = mp.get(node_info, 'type')
-            sample_node = mp.new_map(5, 0.7)
-            mp.put(sample_node, 'id', node_id)
-            mp.put(sample_node, 'type', node_type)
-            mp.put(sample_node, 'latitude', mp.get(node_info, 'latitude'))
-            mp.put(sample_node, 'longitude', mp.get(node_info, 'longitude'))
-            lt.add_last(sample_list, sample_node)
-            count += 1
-        except Exception:
-            continue
-    return sample_list
-
-
+# Funciones de requerimientos restantes (placeholder)
 def req_2(catalog):
-    """
-    Retorna el resultado del requerimiento 2
-    """
-    # TODO: Modificar el requerimiento 2
+    """Retorna el resultado del requerimiento 2"""
     pass
-
 
 def req_3(catalog):
-    """
-    Retorna el resultado del requerimiento 3
-    """
-    # TODO: Modificar el requerimiento 3
+    """Retorna el resultado del requerimiento 3"""
     pass
-
 
 def req_4(catalog):
-    """
-    Retorna el resultado del requerimiento 4
-    """
-    # TODO: Modificar el requerimiento 4
+    """Retorna el resultado del requerimiento 4"""
     pass
 
-
 def req_5(catalog):
-    """
-    Retorna el resultado del requerimiento 5
-    """
-    # TODO: Modificar el requerimiento 5
+    """Retorna el resultado del requerimiento 5"""
     pass
 
 def req_6(catalog):
-    """
-    Retorna el resultado del requerimiento 6
-    """
-    # TODO: Modificar el requerimiento 6
+    """Retorna el resultado del requerimiento 6"""
     pass
-
 
 def req_7(catalog):
-    """
-    Retorna el resultado del requerimiento 7
-    """
-    # TODO: Modificar el requerimiento 7
+    """Retorna el resultado del requerimiento 7"""
     pass
-
 
 def req_8(catalog):
-    """
-    Retorna el resultado del requerimiento 8
-    """
-    # TODO: Modificar el requerimiento 8
+    """Retorna el resultado del requerimiento 8"""
     pass
 
-
 # Funciones para medir tiempos de ejecucion
-
 def get_time():
-    """
-    devuelve el instante tiempo de procesamiento en milisegundos
-    """
+    """devuelve el instante tiempo de procesamiento en milisegundos"""
     return float(time.perf_counter()*1000)
 
-
 def delta_time(start, end):
-    """
-    devuelve la diferencia entre tiempos de procesamiento muestreados
-    """
+    """devuelve la diferencia entre tiempos de procesamiento muestreados"""
     elapsed = float(end - start)
     return elapsed
