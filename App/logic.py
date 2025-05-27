@@ -1,33 +1,20 @@
-import sys
-import os
-import csv
 import time
-import math
-from datetime import datetime
-import tabulate as tb
+import csv
+import os
+from DataStructures.Graph import digraph as dg
+from DataStructures.Map import map_linear_probing as mp  
+from DataStructures.List import array_list as lt
+from DataStructures.Graph import bfs as bfs_alg
+from DataStructures.Stack import stack as st
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-default_limit = 1000000
-sys.setrecursionlimit(default_limit * 10)
-
-from DataStructures.Graph import udgraph as gr
-from DataStructures.List import array_list as al
-from DataStructures.List.list_iterator import iterator
-from DataStructures.Map import map_linear_probing as lp
-
-data_dir = os.path.dirname(os.path.realpath("__file__")) + "\\Data\\"
-csv.field_size_limit(2147483647)
-
-def new_logic(size = 1000):
+def new_logic():
     """
     Crea el catalogo para almacenar las estructuras de datos
     """
     # Crear catálogo principal usando mapa
     catalog = mp.new_map(20, 0.7)
-    
     # Crear grafo principal no dirigido
     mp.put(catalog, 'graph', dg.new_graph(10000))
-    
     # Crear mapas para almacenar información
     mp.put(catalog, 'deliveries', mp.new_map(5000, 0.7))
     mp.put(catalog, 'delivery_persons', mp.new_map(1000, 0.7))
@@ -36,7 +23,6 @@ def new_logic(size = 1000):
     mp.put(catalog, 'node_deliverers', mp.new_map(5000, 0.7))
     mp.put(catalog, 'edge_times', mp.new_map(10000, 0.7))
     mp.put(catalog, 'deliverer_last_delivery', mp.new_map(1000, 0.7))
-    
     # Crear mapa de estadísticas usando tus mapas
     stats = mp.new_map(15, 0.7)
     mp.put(stats, 'total_deliveries', 0)
@@ -47,12 +33,13 @@ def new_logic(size = 1000):
     mp.put(stats, 'total_delivery_locations', 0)
     mp.put(stats, 'total_delivery_time', 0.0)
     mp.put(stats, 'avg_delivery_time', 0.0)
-    
     mp.put(catalog, 'stats', stats)
-    
     return catalog
 
 def load_data(catalog, filename):
+    """
+    Carga los datos del reto - VERSIÓN CORREGIDA PARA IDs PROBLEMÁTICOS
+    """
     if filename is None:
         print("\nArchivos disponibles:")
         print("1. Data/deliverytime_20.csv")
@@ -73,6 +60,7 @@ def load_data(catalog, filename):
             filename = mp.get(files, '1')
     print(f"Cargando datos desde: {filename}")
     start_time = time.time()
+    # Contadores detallados
     error_stats = {
         'invalid_ids': 0,
         'coordinate_errors': 0,
@@ -83,6 +71,7 @@ def load_data(catalog, filename):
     try:
         with open(filename, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
+            # Obtener referencias a los mapas
             graph = mp.get(catalog, 'graph')
             deliveries = mp.get(catalog, 'deliveries')
             delivery_persons = mp.get(catalog, 'delivery_persons')
@@ -95,8 +84,10 @@ def load_data(catalog, filename):
             processed_count = 0
             for row_num, row in enumerate(reader, 1):
                 try:
+                    # 1. LIMPIAR Y VALIDAR IDs - MANEJO ESPECIAL
                     raw_delivery_id = row.get('ID', '').strip()
                     raw_person_id = row.get('Delivery_person_ID', '').strip()
+                    #  LIMPIAR IDs PROBLEMÁTICOS
                     delivery_id = clean_id(raw_delivery_id)
                     delivery_person_id = clean_id(raw_person_id)
                     if not delivery_id or not delivery_person_id:
@@ -104,21 +95,26 @@ def load_data(catalog, filename):
                         if error_stats['invalid_ids'] <= 3:
                             print(f"Fila {row_num}: IDs problemáticos - Original: '{raw_delivery_id}' -> '{delivery_id}', Person: '{raw_person_id}' -> '{delivery_person_id}'")
                         continue
+                    # 2. COORDENADAS - SIN RESTRICCIONES INNECESARIAS
                     try:
                         rest_lat_str = row.get('Restaurant_latitude', '0').strip()
                         rest_lon_str = row.get('Restaurant_longitude', '0').strip()
                         dest_lat_str = row.get('Delivery_location_latitude', '0').strip()
                         dest_lon_str = row.get('Delivery_location_longitude', '0').strip()
+                        
                         rest_lat = float(rest_lat_str)
                         rest_lon = float(rest_lon_str)
                         dest_lat = float(dest_lat_str)  
                         dest_lon = float(dest_lon_str)
+                        # VALIDACIÓN SOLO PARA RANGOS GEOGRÁFICOS REALES
+                        # Latitud: -90 a 90, Longitud: -180 a 180
                         if (abs(rest_lat) > 90 or abs(rest_lon) > 180 or 
                             abs(dest_lat) > 90 or abs(dest_lon) > 180):
                             error_stats['coordinate_errors'] += 1
                             if error_stats['coordinate_errors'] <= 3:
                                 print(f"Fila {row_num}: Coordenadas fuera de rango - Rest({rest_lat},{rest_lon}) Dest({dest_lat},{dest_lon})")
                             continue
+                        # Formatear a 4 decimales
                         rest_lat = f"{rest_lat:.4f}"
                         rest_lon = f"{rest_lon:.4f}"
                         dest_lat = f"{dest_lat:.4f}"
@@ -128,6 +124,7 @@ def load_data(catalog, filename):
                         if error_stats['parsing_errors'] <= 3:
                             print(f"Fila {row_num}: Error parsing coordenadas - {e}")
                         continue
+                    # 3. TIEMPO - MANEJO ROBUSTO
                     time_taken = 0.0
                     try:
                         time_field = row.get('Time_taken(min)', '0').strip()
@@ -137,8 +134,10 @@ def load_data(catalog, filename):
                                 time_taken = 0.0
                     except (ValueError, TypeError):
                         time_taken = 0.0
+                    # 4. PROCESAR NORMALMENTE (resto del código igual)
                     origin_node = f"{rest_lat}_{rest_lon}"
                     dest_node = f"{dest_lat}_{dest_lon}"
+                    # Agregar nodos si no existen
                     if not dg.contains_vertex(graph, origin_node):
                         node_info = mp.new_map(10, 0.7)
                         mp.put(node_info, 'latitude', rest_lat)
@@ -159,8 +158,10 @@ def load_data(catalog, filename):
                         mp.put(delivery_locations, dest_node, True)
                         current_count = mp.get(stats, 'total_delivery_locations')
                         mp.put(stats, 'total_delivery_locations', current_count + 1)
+                    # Agregar domiciliario a ambos nodos
                     _add_deliverer_to_node(graph, node_deliverers, origin_node, delivery_person_id)
                     _add_deliverer_to_node(graph, node_deliverers, dest_node, delivery_person_id)
+                    # Agregar/actualizar arco entre origen y destino
                     edge_key = f"{min(origin_node, dest_node)}_{max(origin_node, dest_node)}"
                     if mp.contains(edge_times, edge_key):
                         edge_data = mp.get(edge_times, edge_key)
@@ -180,6 +181,7 @@ def load_data(catalog, filename):
                         mp.put(edge_data, 'avg_time', time_taken)
                         mp.put(edge_times, edge_key, edge_data)
                         dg.add_edge(graph, origin_node, dest_node, time_taken)
+                    # Arco secuencial por domiciliario
                     if mp.contains(deliverer_last_delivery, delivery_person_id):
                         last_dest = mp.get(deliverer_last_delivery, delivery_person_id)
                         if last_dest != dest_node:
@@ -203,6 +205,7 @@ def load_data(catalog, filename):
                                 mp.put(edge_times, seq_edge_key, edge_data)
                                 dg.add_edge(graph, last_dest, dest_node, time_taken)
                     mp.put(deliverer_last_delivery, delivery_person_id, dest_node)
+                    # Agregar domiciliario si es nuevo
                     if not mp.contains(delivery_persons, delivery_person_id):
                         person_info = mp.new_map(10, 0.7)
                         age_str = row.get('Delivery_person_Age', 'Unknown').strip()
@@ -219,6 +222,7 @@ def load_data(catalog, filename):
                         person_info = mp.get(delivery_persons, delivery_person_id)
                         current_deliveries = mp.get(person_info, 'delivery_count')
                         mp.put(person_info, 'delivery_count', current_deliveries + 1)
+                    # Guardar domicilio
                     delivery_info = mp.new_map(10, 0.7)
                     order_type = row.get('Type_of_order', 'Unknown').strip()
                     mp.put(delivery_info, 'delivery_person_id', delivery_person_id)
@@ -227,19 +231,19 @@ def load_data(catalog, filename):
                     mp.put(delivery_info, 'time_taken', time_taken)
                     mp.put(delivery_info, 'order_type', order_type)
                     mp.put(deliveries, delivery_id, delivery_info)
+                    # Actualizar estadísticas
                     current_total_deliveries = mp.get(stats, 'total_deliveries')
                     current_total_time = mp.get(stats, 'total_delivery_time')
                     mp.put(stats, 'total_deliveries', current_total_deliveries + 1)
                     mp.put(stats, 'total_delivery_time', current_total_time + time_taken)
                     processed_count += 1
-                    
                 except UnicodeDecodeError:
                     error_stats['encoding_errors'] += 1
                 except Exception as e:
                     error_stats['other_errors'] += 1
                     if error_stats['other_errors'] <= 3:
                         print(f"Error en fila {row_num}: {e}")
-
+        # Calcular estadísticas finales
         mp.put(stats, 'total_nodes', dg.order(graph))
         mp.put(stats, 'total_edges', dg.size(graph))
         total_deliveries = mp.get(stats, 'total_deliveries')
@@ -249,6 +253,7 @@ def load_data(catalog, filename):
             mp.put(stats, 'avg_delivery_time', avg_time)
         end_time = time.time()
         total_errors = sum(error_stats.values())
+        # Mostrar resumen detallado
         print(f"\nCarga completada en {end_time - start_time:.2f} segundos")
         print("="*60)
         print("RESUMEN DE CARGA CON ANÁLISIS DE ERRORES")
@@ -273,7 +278,6 @@ def load_data(catalog, filename):
         print(f"Promedio de tiempo de entrega: {mp.get(stats, 'avg_delivery_time'):.2f} minutos")
         print("="*60)
         return catalog
-        
     except FileNotFoundError:
         print(f"Error: No se encontró el archivo {filename}")
         return None
@@ -287,7 +291,9 @@ def clean_id(raw_id):
     """
     if not raw_id:
         return ""
+    # Limpiar espacios y caracteres especiales
     cleaned = raw_id.strip()
+    # Manejar notación científica convirtiéndola a string válido
     try:
         # Si es notación científica (contiene E+ o E-), convertir a número y luego a string
         if 'E+' in cleaned.upper() or 'E-' in cleaned.upper():
@@ -301,10 +307,8 @@ def clean_id(raw_id):
     except (ValueError, TypeError):
         # Si no se puede convertir, limpiar caracteres problemáticos
         cleaned = ''.join(c for c in cleaned if c.isalnum() or c in ['_', '-'])
-    
     # Eliminar caracteres especiales problemáticos como Â
     cleaned = ''.join(c for c in cleaned if ord(c) < 128)  # Solo ASCII
-    
     return cleaned if len(cleaned) > 0 else ""
 
 def _add_deliverer_to_node(graph, node_deliverers, node_id, delivery_person_id):
@@ -312,7 +316,6 @@ def _add_deliverer_to_node(graph, node_deliverers, node_id, delivery_person_id):
     Agrega un domiciliario a la lista de un nodo - FUNCIÓN HELPER MEJORADA
     """
     deliverer_key = f"{node_id}_{delivery_person_id}"
-    
     # Verificar si ya se agregó este domiciliario a este nodo
     if not mp.contains(node_deliverers, deliverer_key):
         mp.put(node_deliverers, deliverer_key, True)
@@ -372,7 +375,7 @@ def req_1(catalog, origin_id, dest_id):
             'error': f'Nodo destino {dest_id} no existe',
             'execution_time': delta_time(start_time, get_time())
         }
-    # Ejecutar BFS para encontrar camino (usando tu bfs.py)
+    # Ejecutar BFS para encontrar camino (usando bfs)
     search_result = bfs_alg.bfs(graph, origin_id)
     # Verificar si existe camino
     if not bfs_alg.has_path_to_bfs(search_result, dest_id):
@@ -381,7 +384,7 @@ def req_1(catalog, origin_id, dest_id):
             'error': 'No existe camino entre los nodos',
             'execution_time': delta_time(start_time, get_time())
         }
-    # Obtener el camino (usando tu bfs.py)
+    # Obtener el camino (usando bfs)
     path_stack = bfs_alg.path_to_bfs(search_result, dest_id)
     # Convertir stack a array_list para procesamiento
     path_list = lt.new_list()  
@@ -417,11 +420,6 @@ def req_1(catalog, origin_id, dest_id):
         'restaurants_found': restaurant_list,
         'execution_time': delta_time(start_time, end_time)
     }
-
-# Funciones de requerimientos restantes (placeholder)
-def req_1(catalog):
-    """Retorna el resultado del requerimiento 1"""
-    pass
 
 def req_2(catalog):
     """Retorna el resultado del requerimiento 2"""

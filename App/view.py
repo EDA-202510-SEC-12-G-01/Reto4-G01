@@ -1,25 +1,10 @@
-
 import sys
-import os
-import tabulate as tb
-from datetime import datetime
-import tabulate as tb
-
-
-default_limit=100000
-sys.setrecursionlimit(default_limit*10)
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from DataStructures.List.list_iterator import iterator
-from DataStructures.List import array_list as al
 from App import logic
+from DataStructures.Map import map_linear_probing as mp
+from DataStructures.List import array_list as lt
+
 
 def new_logic():
-    """
-        Se crea una instancia del controlador
-    """
-    #TODO: Llamar la función de la lógica donde se crean las estructuras de datos
     return logic.new_logic()
 
 def print_menu():
@@ -35,7 +20,7 @@ def print_menu():
     print("9- Ejecutar Requerimiento 8 (Bono)")
     print("0- Salir")
 
-def load_data(control, archivo):
+def load_data(control):
     """
     Carga los datos
     """
@@ -52,7 +37,6 @@ def load_data(control, archivo):
     while True:
         try:
             choice = input("Selecciona una opción (1-5): ").strip()
-            
             files = {
                 '1': 'Data/deliverytime_20.csv',
                 '2': 'Data/deliverytime_40.csv',
@@ -64,11 +48,10 @@ def load_data(control, archivo):
                 filename = files[choice]
                 break
             else:
-                print("Opción inválida. Por favor selecciona 1-5.") 
+                print("Opción inválida. Por favor selecciona 1-5.")
         except KeyboardInterrupt:
             print("\nOperación cancelada.")
             return control
-    # Cargar los datos usando la función de logic
     updated_control = logic.load_data(control, filename)
     if updated_control:
         print("¡Datos cargados exitosamente!")
@@ -77,9 +60,10 @@ def load_data(control, archivo):
         print("Error al cargar los datos.")
         return control
 
+
 def print_data(control, id):
     """
-        Función que imprime la solución del Requerimiento 1 en consola
+        Función que imprime un dato dado su ID
     """
     data = logic.get_data(control, id)
     if data:
@@ -101,7 +85,6 @@ def print_data(control, id):
     else:
         print(f"No se encontró información para el ID: {id}")
 
-# Actualizar view.py con esta función mejorada
 def print_req_1(control):
     """
     Función que imprime la solución del Requerimiento 1 en consola
@@ -110,33 +93,25 @@ def print_req_1(control):
     print("REQUERIMIENTO 1: CAMINO SIMPLE ENTRE UBICACIONES")
     print("="*60)
     try:
-        # Solicitar parámetros
         print("Ingrese los IDs de las ubicaciones:")
         origin_id = input(" Nodo origen: ").strip()
         dest_id = input(" Nodo destino: ").strip()
-        
         if not origin_id or not dest_id:
             print(" Los IDs no pueden estar vacíos")
             return
         print(f"\n Buscando camino desde '{origin_id}' hasta '{dest_id}'...")
-        # Ejecutar requerimiento
         result = logic.req_1(control, origin_id, dest_id)
-        # Mostrar resultados
         print("\n" + "="*50)
         print(" RESULTADOS")
         print("="*50)
-        
         print(f"  Tiempo de ejecución: {result['execution_time']:.2f} ms")
-        
         if result['found']:
             print(" ¡Camino encontrado!")
             print(f"📏 Cantidad de puntos en el camino: {result['path_length']}")
-            
             # Mostrar secuencia del camino
             print(f"\n  SECUENCIA DEL CAMINO:")
             path = result['path_sequence']
             path_size = lt.size(path)  
-            
             for i in range(path_size):  
                 node = lt.get_element(path, i) 
                 if i == 0:
@@ -149,7 +124,6 @@ def print_req_1(control):
             deliverers = result['unique_deliverers']
             deliverers_count = lt.size(deliverers) 
             print(f"\n DOMICILIARIOS EN EL CAMINO ({deliverers_count} únicos):")
-            
             max_show = min(10, deliverers_count)
             for i in range(max_show): 
                 deliverer = lt.get_element(deliverers, i)  
@@ -239,51 +213,37 @@ def main():
     """
     Menu principal - VERSIÓN CORREGIDA
     """
-    # ✅ SOLUCIÓN: Crear control localmente dentro de main()
     control = new_logic()
-    
     working = True
-    #ciclo del menu
     while working:
         print_menu()
         try:
             inputs = input('Seleccione una opción para continuar\n')
             option = int(inputs)
-            
             if option == 1:
                 print("Cargando información de los archivos ....\n")
-                control = load_data(control)  # ✅ Ahora funciona correctamente
-
+                control = load_data(control) 
             elif option == 2:
                 print_req_1(control)
-
             elif option == 3:
                 print_req_2(control)
-
             elif option == 4:
                 print_req_3(control)
-
             elif option == 5:
                 print_req_4(control)
-
             elif option == 6:
                 print_req_5(control)
-
             elif option == 7:
                 print_req_6(control)
-
             elif option == 8:
                 print_req_7(control)
-
             elif option == 9:
                 print_req_8(control)
-
             elif option == 0:
                 working = False
                 print("\nGracias por utilizar el programa") 
             else:
                 print("Opción errónea, vuelva a elegir.\n")
-                
         except ValueError:
             print("Por favor ingrese un número válido.\n")
         except KeyboardInterrupt:
