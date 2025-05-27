@@ -4,6 +4,8 @@ import os
 from DataStructures.Graph import digraph as dg
 from DataStructures.Map import map_linear_probing as mp  
 from DataStructures.List import array_list as lt
+from DataStructures.Graph import bfs as bfs_alg
+from DataStructures.Stack import stack as st
 
 def new_logic():
     # Crear catálogo principal usando mapa
@@ -282,12 +284,119 @@ def get_data(catalog, id):
     pass
 
 
-def req_1(catalog):
-    """
-    Retorna el resultado del requerimiento 1
-    """
-    # TODO: Modificar el requerimiento 1
-    pass
+def req_1(catalog, origin_id, dest_id):
+    start_time = time.perf_counter()
+    result = mp.new_map(10, 0.7)
+    graph = mp.get(catalog, 'graph')
+    if not dg.contains_vertex(graph, origin_id):
+        mp.put(result, 'error', f"El punto de origen '{origin_id}' no existe en el grafo")
+        mp.put(result, 'execution_time', 0.0)
+        return result
+    if not dg.contains_vertex(graph, dest_id):
+        mp.put(result, 'error', f"El punto de destino '{dest_id}' no existe en el grafo")
+        mp.put(result, 'execution_time', 0.0)
+        return result
+    if origin_id == dest_id:
+        mp.put(result, 'error', "El origen y destino son el mismo punto")
+        mp.put(result, 'execution_time', 0.0)
+        return result
+    try:
+        bfs_result = bfs_alg.bfs(graph, origin_id)
+        if not bfs_alg.has_path_to_bfs(bfs_result, dest_id):
+            mp.put(result, 'path_exists', False)
+            mp.put(result, 'message', f"No existe camino entre '{origin_id}' y '{dest_id}'")
+            end_time = time.perf_counter()
+            mp.put(result, 'execution_time', (end_time - start_time) * 1000)  # En milisegundos
+            return result
+        path_stack = bfs_alg.path_to_bfs(bfs_result, dest_id)
+        path_list = lt.new_list()
+        while not st.is_empty(path_stack):
+            node = st.pop(path_stack)
+            lt.add_first(path_list, node)
+        path_info = _analyze_path(catalog, path_list)
+        mp.put(result, 'path_exists', True)
+        mp.put(result, 'origin', origin_id)
+        mp.put(result, 'destination', dest_id)
+        mp.put(result, 'path_length', lt.size(path_list))
+        mp.put(result, 'path_sequence', path_list)
+        mp.put(result, 'deliverers', mp.get(path_info, 'deliverers'))
+        mp.put(result, 'restaurants', mp.get(path_info, 'restaurants'))
+        mp.put(result, 'total_deliverers', mp.get(path_info, 'total_deliverers'))
+        mp.put(result, 'total_restaurants', mp.get(path_info, 'total_restaurants'))
+        end_time = time.perf_counter()
+        mp.put(result, 'execution_time', (end_time - start_time) * 1000)  # En milisegundos
+        return result
+        
+    except Exception as e:
+        mp.put(result, 'error', f"Error ejecutando BFS: {str(e)}")
+        end_time = time.perf_counter()
+        mp.put(result, 'execution_time', (end_time - start_time) * 1000)
+        return result
+
+def _analyze_path(catalog, path_list):
+    graph = mp.get(catalog, 'graph')
+    path_info = mp.new_map(10, 0.7)
+    deliverers_set = mp.new_map(100, 0.7)
+    restaurants_set = mp.new_map(50, 0.7)
+    deliverers_list = lt.new_list()
+    restaurants_list = lt.new_list()
+    for i in range(lt.size(path_list)):
+        node_id = lt.get_element(path_list, i)
+        try:
+            node_info = dg.get_vertex_information(graph, node_id)
+            node_type = mp.get(node_info, 'type')
+            if node_type == 'restaurant' and not mp.contains(restaurants_set, node_id):
+                mp.put(restaurants_set, node_id, True)
+                restaurant_info = mp.new_map(5, 0.7)
+                mp.put(restaurant_info, 'id', node_id)
+                mp.put(restaurant_info, 'latitude', mp.get(node_info, 'latitude'))
+                mp.put(restaurant_info, 'longitude', mp.get(node_info, 'longitude'))
+                lt.add_last(restaurants_list, restaurant_info)
+            if mp.contains(node_info, 'deliverers'):
+                deliverers_in_node = mp.get(node_info, 'deliverers')
+                for j in range(lt.size(deliverers_in_node)):
+                    deliverer_id = lt.get_element(deliverers_in_node, j)
+                    if not mp.contains(deliverers_set, deliverer_id):
+                        mp.put(deliverers_set, deliverer_id, True)
+                        lt.add_last(deliverers_list, deliverer_id)
+        except Exception:
+            continue
+    mp.put(path_info, 'deliverers', deliverers_list)
+    mp.put(path_info, 'restaurants', restaurants_list)
+    mp.put(path_info, 'total_deliverers', lt.size(deliverers_list))
+    mp.put(path_info, 'total_restaurants', lt.size(restaurants_list))
+    return path_info
+
+def _format_node_id(latitude, longitude):
+    try:
+        lat = f"{float(latitude):.4f}"
+        lon = f"{float(longitude):.4f}"
+        return f"{lat}_{lon}"
+    except (ValueError, TypeError):
+        return None
+
+def get_available_nodes_sample(catalog, limit=10):
+    graph = mp.get(catalog, 'graph')
+    vertices = dg.vertices(graph)
+    sample_list = lt.new_list()
+    count = 0
+    for i in range(lt.size(vertices)):
+        if count >= limit:
+            break
+        node_id = lt.get_element(vertices, i)
+        try:
+            node_info = dg.get_vertex_information(graph, node_id)
+            node_type = mp.get(node_info, 'type')
+            sample_node = mp.new_map(5, 0.7)
+            mp.put(sample_node, 'id', node_id)
+            mp.put(sample_node, 'type', node_type)
+            mp.put(sample_node, 'latitude', mp.get(node_info, 'latitude'))
+            mp.put(sample_node, 'longitude', mp.get(node_info, 'longitude'))
+            lt.add_last(sample_list, sample_node)
+            count += 1
+        except Exception:
+            continue
+    return sample_list
 
 
 def req_2(catalog):
