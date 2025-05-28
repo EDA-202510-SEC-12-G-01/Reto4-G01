@@ -154,26 +154,27 @@ def req_1(catalog, A, B):
         }
 
     path_stack = dfs.path_to(B, search)
-    path = []
+    path = al.new_list()
     while not stk.is_empty(path_stack):
-        path.append(stk.pop(path_stack))
+        al.add_last(path, stk.pop(path_stack))
 
-    doms = set()
-    rests = []
-    for loc in path:
+    doms = al.new_list()
+    rests = al.new_list()
+    for loc in iterator(path):
         info = lp.get(catalog['nodes'], loc)
         if info:
             for d in info['domiciliarios']:
-                doms.add(d)
+                al.add_last(doms, d)
         if al.contains(catalog['restaurant_locations'], loc):
-            rests.append(loc)
+            al.add_last(rests, loc)
+
 
     end = get_time()
     return {
         'execution_time': delta_time(start, end),
-        'points_count': len(path),
+        'points_count': al.size(path),
         'path': path,
-        'domiciliarios': list(doms),
+        'domiciliarios': doms,
         'restaurants': rests
     }
 
@@ -217,4 +218,8 @@ def delta_time(start, end):
     return elapsed
 
 
+catalog = new_logic(1)
 
+load_data(catalog, "deliverytime_min.csv")
+print(catalog['graph'])
+print(req_1(catalog, "22.7452_75.9161", "22.7352_75.9061"))
