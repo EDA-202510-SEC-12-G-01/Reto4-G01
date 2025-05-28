@@ -177,6 +177,7 @@ def req_1(catalog, A, B):
         'restaurants': rests
     }
 
+
 def req_2(catalog):
     """Retorna el resultado del requerimiento 2"""
     pass
