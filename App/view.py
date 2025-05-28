@@ -501,7 +501,7 @@ def print_req_6(control):
 
 def print_req_7(control):
     """
-    REQ 7: Función que imprime la solución del Requerimiento 7 en consola
+    REQ 7 CORREGIDO: Función que imprime la solución del Requerimiento 7 en consola
     """
     print("\n" + "="*60)
     print("REQUERIMIENTO 7: ÁRBOL DE RECUBRIMIENTO MÍNIMO PARA DOMICILIARIO")
@@ -510,54 +510,156 @@ def print_req_7(control):
     try:
         print("Ingrese los parámetros requeridos:")
         print("Formato de punto geográfico: 22.7446_75.8944")
+        print("También puede usar coordenadas separadas como: 22.7446 75.8944")
         print()
         
-        origen = input(" Punto geográfico de origen: ").strip()
+        # Función auxiliar para validar y formatear coordenadas
+        def process_input(user_input):
+            user_input = user_input.strip()
+            
+            # Si ya viene en formato correcto (lat_lon)
+            if '_' in user_input and len(user_input.split('_')) == 2:
+                parts = user_input.split('_')
+                try:
+                    lat = float(parts[0])
+                    lon = float(parts[1])
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Si viene como "lat lon" (separado por espacio)
+            elif ' ' in user_input and len(user_input.split()) == 2:
+                parts = user_input.split()
+                try:
+                    lat = float(parts[0])
+                    lon = float(parts[1])
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Si viene como "lat,lon" (separado por coma)
+            elif ',' in user_input and len(user_input.split(',')) == 2:
+                parts = user_input.split(',')
+                try:
+                    lat = float(parts[0].strip())
+                    lon = float(parts[1].strip())
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Devolver tal como está
+            return user_input
+        
+        origen_input = input(" Punto geográfico de origen: ").strip()
         courier_id = input(" ID del domiciliario: ").strip()
         
-        if not origen or not courier_id:
+        if not origen_input or not courier_id:
             print(" Ambos parámetros son requeridos")
             return
         
-        print(f"\n Calculando árbol de recubrimiento mínimo...")
-        print(f"    Origen: {origen}")
-        print(f"    Domiciliario: {courier_id}")
+        # Procesar la entrada del origen
+        origen = process_input(origen_input)
         
+        print(f"\n Procesando entradas:")
+        print(f"   Origen: '{origen_input}' → '{origen}'")
+        print(f"   Domiciliario: '{courier_id}'")
+        print(f"\n Calculando árbol de recubrimiento mínimo...")
+        
+        # Ejecutar requerimiento
         resultado = logic.req_7(control, origen, courier_id)
         
-        # Convertir ubicaciones a Python list
-        ubicaciones_list = []
-        ubicaciones = resultado['ubicaciones']
-        for i in range(lt.size(ubicaciones)):
-            ubicaciones_list.append(lt.get_element(ubicaciones, i))
+        # Preparar tabla de resultados principales
+        table_data = []
+        table_data.append(["Tiempo de Ejecución (ms)", resultado['tiempo_ms']])
         
-        # Crear tabla de resultados
-        table = [
-            ["Tiempo de Ejecución (ms)", resultado['tiempo_ms']],
-            ["Cantidad de ubicaciones en sub-red", resultado['cantidad_ubicaciones']],
-            ["Tiempo total del MST (minutos)", f"{resultado['tiempo_total_mst']:.2f}"],
-            ["Domiciliario analizado", courier_id],
-            ["Punto de origen", origen]
-        ]
+        if resultado['error'] is None:
+            # Caso exitoso
+            table_data.append(["Estado", "✅ Análisis completado"])
+            table_data.append(["Domiciliario analizado", resultado.get('domiciliario_analizado', courier_id)])
+            table_data.append(["Punto de origen", resultado.get('punto_origen', origen)])
+            table_data.append(["Ubicaciones en sub-red", resultado['cantidad_ubicaciones']])
+            table_data.append(["Tiempo total del MST (min)", f"{resultado['tiempo_total_mst']:.2f}"])
+            
+            # Información adicional si está disponible
+            if 'aristas_en_subgrafo' in resultado:
+                table_data.append(["Aristas en el subgrafo", resultado['aristas_en_subgrafo']])
+            
+        else:
+            # Caso con error
+            table_data.append(["Estado", "❌ Error en el análisis"])
+            table_data.append(["Motivo", resultado['error']])
+            table_data.append(["Domiciliario analizado", resultado.get('domiciliario_analizado', courier_id)])
+            table_data.append(["Punto de origen", resultado.get('punto_origen', origen)])
+            table_data.append(["Ubicaciones en sub-red", resultado['cantidad_ubicaciones']])
+            table_data.append(["Tiempo total del MST", "N/A"])
         
         print("\n--- Resultado Requerimiento 7 ---")
-        print(tb.tabulate(table, headers=["Concepto", "Valor"], tablefmt="grid"))
+        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="grid"))
         
-        # Mostrar ubicaciones en grupos
-        if ubicaciones_list:
-            print(f"\n  UBICACIONES EN LA SUB-RED (ordenadas alfabéticamente):")
-            grupos = [ubicaciones_list[i:i+5] for i in range(0, len(ubicaciones_list), 5)]
-            for grupo in grupos:
-                print("     " + ", ".join(grupo))
-        else:
-            print(f"\n  No se encontraron ubicaciones para el domiciliario {courier_id}")
+        # Mostrar ubicaciones si las hay
+        if resultado['cantidad_ubicaciones'] > 0:
+            print(f"\n📍 UBICACIONES EN LA SUB-RED (ordenadas alfabéticamente):")
+            
+            # Convertir ubicaciones a Python list
+            ubicaciones_list = []
+            ubicaciones = resultado['ubicaciones']
+            for i in range(al.size(ubicaciones)):
+                ubicaciones_list.append(al.get_element(ubicaciones, i))
+            
+            if ubicaciones_list:
+                print(f"   Total: {len(ubicaciones_list)} ubicaciones")
+                print()
+                
+                # Mostrar en grupos de 4 para mejor legibilidad
+                grupos = [ubicaciones_list[i:i+4] for i in range(0, len(ubicaciones_list), 4)]
+                for i, grupo in enumerate(grupos):
+                    print(f"   {i*4+1:3d}-{min((i+1)*4, len(ubicaciones_list)):3d}: {', '.join(grupo)}")
+        
+        # Mostrar información adicional según el resultado
+        if resultado['error'] is None:
+            if resultado['cantidad_ubicaciones'] >= 2:
+                print(f"\n🌳 INFORMACIÓN DEL MST:")
+                print(f"   - Tiempo total mínimo para conectar todas las ubicaciones: {resultado['tiempo_total_mst']:.2f} minutos")
+                print(f"   - Domiciliario: {resultado.get('domiciliario_analizado', courier_id)}")
+                print(f"   - Punto de partida: {resultado.get('punto_origen', origen)}")
+                if 'aristas_en_subgrafo' in resultado:
+                    print(f"   - Conexiones encontradas en el subgrafo: {resultado['aristas_en_subgrafo']}")
+            elif resultado['cantidad_ubicaciones'] == 1:
+                print(f"\n📍 INFORMACIÓN:")
+                print(f"   - El domiciliario {courier_id} solo tiene una ubicación registrada")
+                print(f"   - No es posible calcular un MST con una sola ubicación")
+            
+        elif "no se encontró" in resultado['error'].lower():
+            print(f"\n💡 Sugerencias para el domiciliario:")
+            print(f"   - Verifique que el ID '{courier_id}' sea correcto")
+            print(f"   - Asegúrese de que el domiciliario esté registrado en el dataset")
+            print(f"   - Intente con otros IDs de domiciliarios")
+            
+        elif "no existe" in resultado['error'].lower():
+            print(f"\n💡 Sugerencias para el punto origen:")
+            print(f"   - Verifique que las coordenadas '{origen}' sean correctas")
+            print(f"   - Asegúrese de que el punto exista en el dataset cargado")
+            print(f"   - Intente con otros puntos geográficos")
+            
+        elif "no están conectadas" in resultado['error'].lower():
+            print(f"\n💡 Información sobre conectividad:")
+            print(f"   - Las ubicaciones del domiciliario {courier_id} no están conectadas entre sí")
+            print(f"   - Esto puede deberse a la estructura de los datos de entrega")
+            print(f"   - Intente con otro domiciliario que tenga más actividad")
         
         print()
         
     except Exception as e:
         print(f" Error en requerimiento 7: {e}")
+        print("\n🔍 Información de depuración:")
         import traceback
         traceback.print_exc()
+        print("\n💡 Posibles soluciones:")
+        print("   - Verifique que los datos estén cargados correctamente")
+        print("   - Asegúrese de usar el formato correcto de coordenadas")
+        print("   - Verifique que el ID del domiciliario sea válido")
+        print("   - Intente reiniciar el programa y cargar los datos nuevamente")
+        print()
 
 def print_req_8(control):
     """

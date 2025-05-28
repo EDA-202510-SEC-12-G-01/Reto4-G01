@@ -512,82 +512,185 @@ def req_7(catalog, origin, courier_id):
     """
     start = get_time()
     
-    # Validaciones
-    graph = catalog['graph']
-    if not gr.contains_vertex(graph, origin):
-        raise Exception(f"Punto {origin} no existe en el grafo")
-    
-    # 1) Recolectar ubicaciones donde trabajó el domiciliario
-    ubic_set = {}
-    all_vertices = gr.vertices(graph)
-    
-    for i in range(lt.size(all_vertices)):
-        location = lt.get_element(all_vertices, i)
-        deliverers_at_location = gr.get_vertex_information(graph, location)
+    try:
+        # Convertir a string y limpiar entradas
+        origin = str(origin).strip()
+        courier_id = str(courier_id).strip()
         
-        if deliverers_at_location is not None:
-            # Buscar si el courier_id está en esta ubicación
-            for j in range(lt.size(deliverers_at_location)):
-                deliverer = lt.get_element(deliverers_at_location, j)
-                if deliverer == courier_id:
-                    ubic_set[location] = True
-                    break
-    
-    # Incluir origen
-    ubic_set[origin] = True
-    
-    # 2) Convertir set a array_list
-    ubic_list = lt.new_list()
-    for location in ubic_set.keys():
-        lt.add_last(ubic_list, location)
-    
-    # 3) Ordenar alfabéticamente
-    def compare_locations(a, b):
-        return a < b
-    
-    ubic_list = lt.insertion_sort(ubic_list, compare_locations)
-    
-    # 4) Construir subgrafo inducido
-    size_ul = lt.size(ubic_list)
-    sub_graph = gr.new_graph(size_ul)
-    
-    # Insertar vértices
-    for i in range(size_ul):
-        u = lt.get_element(ubic_list, i)
-        gr.insert_vertex(sub_graph, u, None)
-    
-    # Insertar aristas
-    for i in range(size_ul):
-        u = lt.get_element(ubic_list, i)
-        adjacents = gr.adjacents(graph, u)
+        # Validaciones
+        graph = catalog['graph']
+        if not gr.contains_vertex(graph, origin):
+            end_time = get_time()
+            return {
+                'tiempo_ms': round(delta_time(start, end_time), 3),
+                'cantidad_ubicaciones': 0,
+                'ubicaciones': al.new_list(),
+                'tiempo_total_mst': 0.0,
+                'error': f"El punto {origin} no existe en el grafo"
+            }
         
-        for j in range(lt.size(adjacents)):
-            v = lt.get_element(adjacents, j)
-            if v in ubic_set:  # Si v también está en nuestro subconjunto
-                edge = gr.get_edge(graph, u, v)
-                if edge is not None:
-                    # Solo agregar si no existe ya (para evitar duplicados)
-                    existing_edge = gr.get_edge(sub_graph, u, v)
-                    if existing_edge is None:
-                        gr.add_edge(sub_graph, u, v, edge['weight'])
+        # 1) Recolectar ubicaciones donde trabajó el domiciliario
+        ubic_set = {}
+        courier_found = False
+        all_vertices = gr.vertices(graph)
+        
+        for i in range(al.size(all_vertices)):
+            location = al.get_element(all_vertices, i)
+            try:
+                deliverers_at_location = gr.get_vertex_information(graph, location)
+                
+                if deliverers_at_location is not None:
+                    # Buscar si el courier_id está en esta ubicación
+                    for j in range(al.size(deliverers_at_location)):
+                        deliverer = al.get_element(deliverers_at_location, j)
+                        if str(deliverer).strip() == courier_id:
+                            ubic_set[location] = True
+                            courier_found = True
+                            break
+            except:
+                continue  # Si hay error obteniendo información, continuar
+        
+        # Validar que el domiciliario existe en al menos una ubicación
+        if not courier_found:
+            end_time = get_time()
+            return {
+                'tiempo_ms': round(delta_time(start, end_time), 3),
+                'cantidad_ubicaciones': 0,
+                'ubicaciones': al.new_list(),
+                'tiempo_total_mst': 0.0,
+                'error': f"El domiciliario {courier_id} no se encontró en ninguna ubicación"
+            }
+        
+        # Incluir origen siempre (aunque el domiciliario no haya trabajado ahí)
+        ubic_set[origin] = True
+        
+        # 2) Convertir set a array_list
+        ubic_list = al.new_list()
+        for location in ubic_set.keys():
+            al.add_last(ubic_list, location)
+        
+        # 3) Ordenar alfabéticamente
+        ubic_list = sort_locations_alphabetically(ubic_list)
+        
+        # 4) Construir subgrafo inducido
+        size_ul = al.size(ubic_list)
+        if size_ul < 2:
+            # Si solo hay una ubicación, no se puede hacer MST
+            end_time = get_time()
+            return {
+                'tiempo_ms': round(delta_time(start, end_time), 3),
+                'cantidad_ubicaciones': size_ul,
+                'ubicaciones': ubic_list,
+                'tiempo_total_mst': 0.0,
+                'domiciliario_analizado': courier_id,
+                'punto_origen': origin,
+                'error': None
+            }
+        
+        sub_graph = gr.new_graph(size_ul)
+        
+        # Insertar vértices
+        for i in range(size_ul):
+            u = al.get_element(ubic_list, i)
+            gr.insert_vertex(sub_graph, u, None)
+        
+        # Insertar aristas
+        edges_added = 0
+        for i in range(size_ul):
+            u = al.get_element(ubic_list, i)
+            try:
+                adjacents = gr.adjacents(graph, u)
+                
+                for j in range(al.size(adjacents)):
+                    v = al.get_element(adjacents, j)
+                    if v in ubic_set:  # Si v también está en nuestro subconjunto
+                        edge = gr.get_edge(graph, u, v)
+                        if edge is not None:
+                            # Solo agregar si no existe ya (para evitar duplicados)
+                            existing_edge = gr.get_edge(sub_graph, u, v)
+                            if existing_edge is None:
+                                weight = edge['weight'] if isinstance(edge, dict) else edge
+                                gr.add_edge(sub_graph, u, v, weight)
+                                edges_added += 1
+            except:
+                continue  # Si hay error, continuar con el siguiente vértice
+        
+        # Verificar que el subgrafo esté conectado (al menos tenga aristas)
+        if edges_added == 0:
+            end_time = get_time()
+            return {
+                'tiempo_ms': round(delta_time(start, end_time), 3),
+                'cantidad_ubicaciones': size_ul,
+                'ubicaciones': ubic_list,
+                'tiempo_total_mst': 0.0,
+                'domiciliario_analizado': courier_id,
+                'punto_origen': origin,
+                'error': "Las ubicaciones del domiciliario no están conectadas"
+            }
+        
+        # 5) Calcular MST con Prim
+        try:
+            prim_search = prim.prim_mst(sub_graph, origin)
+            total_time = prim.weight_mst(sub_graph, prim_search)
+        except Exception as e:
+            total_time = 0.0
+            end_time = get_time()
+            return {
+                'tiempo_ms': round(delta_time(start, end_time), 3),
+                'cantidad_ubicaciones': size_ul,
+                'ubicaciones': ubic_list,
+                'tiempo_total_mst': 0.0,
+                'domiciliario_analizado': courier_id,
+                'punto_origen': origin,
+                'error': f"Error calculando MST: {str(e)}"
+            }
+        
+        # 6) Resultado exitoso
+        end_time = get_time()
+        elapsed = round(delta_time(start, end_time), 3)
+        
+        return {
+            'tiempo_ms': elapsed,
+            'cantidad_ubicaciones': size_ul,
+            'ubicaciones': ubic_list,
+            'tiempo_total_mst': total_time,
+            'domiciliario_analizado': courier_id,
+            'punto_origen': origin,
+            'aristas_en_subgrafo': edges_added,
+            'error': None
+        }
+        
+    except Exception as e:
+        end_time = get_time()
+        return {
+            'tiempo_ms': round(delta_time(start, end_time), 3),
+            'cantidad_ubicaciones': 0,
+            'ubicaciones': al.new_list(),
+            'tiempo_total_mst': 0.0,
+            'error': f"Error durante la ejecución: {str(e)}"
+        }
+
+def sort_locations_alphabetically(location_list):
+    """
+    Función auxiliar para ordenar ubicaciones alfabéticamente
+    """
+    if al.size(location_list) <= 1:
+        return location_list
     
-    # 5) Calcular MST con Prim
-    if size_ul > 0:
-        prim_search = prim.prim_mst(sub_graph, origin)
-        total_time = prim.weight_mst(sub_graph, prim_search)
-    else:
-        total_time = 0.0
+    # Convertir a lista Python para ordenar
+    locations_py = []
+    for i in range(al.size(location_list)):
+        locations_py.append(al.get_element(location_list, i))
     
-    # 6) Resultado
-    cantidad = size_ul
-    elapsed = round(delta_time(start, get_time()), 3)
+    # Ordenar alfabéticamente
+    locations_py.sort()
     
-    return {
-        'tiempo_ms': elapsed,
-        'cantidad_ubicaciones': cantidad,
-        'ubicaciones': ubic_list,
-        'tiempo_total_mst': total_time
-    }
+    # Convertir de vuelta a array_list
+    sorted_list = al.new_list()
+    for location in locations_py:
+        al.add_last(sorted_list, location)
+    
+    return sorted_list
 
 def req_8(catalog):
     """Retorna el resultado del requerimiento 8"""
