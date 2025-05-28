@@ -62,19 +62,63 @@ def print_req_1(control):
     print("="*60)
     
     try:
-        #  CORREGIDO: Los IDs son strings en formato "lat_lon", no enteros
         print("Ingrese los IDs de las ubicaciones geográficas:")
         print("Formato esperado: 22.7446_75.8944")
+        print("También puede usar coordenadas separadas como: 22.7446 75.8944")
         print()
         
-        origin_id = input(" ID del punto geográfico de origen: ").strip()
-        dest_id = input(" ID del punto geográfico de destino: ").strip()
+        # Función auxiliar para validar y formatear coordenadas
+        def process_input(user_input):
+            user_input = user_input.strip()
+            
+            # Si ya viene en formato correcto (lat_lon)
+            if '_' in user_input and len(user_input.split('_')) == 2:
+                parts = user_input.split('_')
+                try:
+                    lat = float(parts[0])
+                    lon = float(parts[1])
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Si viene como "lat lon" (separado por espacio)
+            elif ' ' in user_input and len(user_input.split()) == 2:
+                parts = user_input.split()
+                try:
+                    lat = float(parts[0])
+                    lon = float(parts[1])
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Si viene como "lat,lon" (separado por coma)
+            elif ',' in user_input and len(user_input.split(',')) == 2:
+                parts = user_input.split(',')
+                try:
+                    lat = float(parts[0].strip())
+                    lon = float(parts[1].strip())
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Devolver tal como está
+            return user_input
         
-        if not origin_id or not dest_id:
+        origin_input = input(" ID del punto geográfico de origen: ").strip()
+        dest_input = input(" ID del punto geográfico de destino: ").strip()
+        
+        if not origin_input or not dest_input:
             print(" Los IDs no pueden estar vacíos")
             return
         
-        print(f"\n Buscando camino desde '{origin_id}' hasta '{dest_id}'...")
+        # Procesar las entradas
+        origin_id = process_input(origin_input)
+        dest_id = process_input(dest_input)
+        
+        print(f"\n Procesando entradas:")
+        print(f"   Origen: '{origin_input}' → '{origin_id}'")
+        print(f"   Destino: '{dest_input}' → '{dest_id}'")
+        print(f"\n Buscando camino...")
         
         # Ejecutar requerimiento
         resultado = logic.req_1(control, origin_id, dest_id)
@@ -82,56 +126,84 @@ def print_req_1(control):
         # Preparar tabla de resultados
         table_data = []
         
-        if resultado['path_exists']:
-            path_sequence_list = resultado['path_sequence']
-            unique_deliverers_list = resultado['unique_deliverers']
-            restaurants_list = resultado['restaurants']
+        # Agregar información básica
+        table_data.append(["Tiempo de Ejecución (ms)", resultado['execution_time']])
+        table_data.append(["Mensaje", resultado['message']])
+        table_data.append(["Puntos en el camino", resultado['points_count']])
+        
+        if resultado['points_count'] > 0:
+            # Convertir path a lista de strings para mostrar
+            path_list = []
+            path_al = resultado['path']
+            for i in range(al.size(path_al)):
+                path_list.append(str(al.get_element(path_al, i)))
             
-            #  CORREGIDO: Usar funciones de array_list correctamente
-            # Convertir path_sequence a string
-            path_str_list = []
-            for i in range(lt.size(path_sequence_list)):
-                path_str_list.append(str(lt.get_element(path_sequence_list, i)))
+            # Convertir domiciliarios a lista de strings
+            dom_list = []
+            doms_al = resultado['domiciliarios']
+            for i in range(al.size(doms_al)):
+                dom_list.append(str(al.get_element(doms_al, i)))
             
-            # Convertir deliverers a string
-            deliverers_str_list = []
-            for i in range(lt.size(unique_deliverers_list)):
-                deliverers_str_list.append(str(lt.get_element(unique_deliverers_list, i)))
+            # Convertir restaurantes a lista de strings
+            rest_list = []
+            rests_al = resultado['restaurants']
+            for i in range(al.size(rests_al)):
+                rest_list.append(str(al.get_element(rests_al, i)))
             
-            # Convertir restaurants a string  
-            restaurants_str_list = []
-            for i in range(lt.size(restaurants_list)):
-                restaurants_str_list.append(str(lt.get_element(restaurants_list, i)))
+            # Mostrar información del camino
+            table_data.append(["Estado", "✅ Camino encontrado"])
+            table_data.append(["Longitud del camino (aristas)", len(path_list) - 1 if len(path_list) > 1 else 0])
             
-            # Construir tabla de resultados
-            table_data.append(["Tiempo de Ejecución (ms)", round(resultado['execution_time'], 3)])
-            table_data.append(["Camino Encontrado", " Sí"])
-            table_data.append(["Cantidad de puntos en el camino", lt.size(path_sequence_list)])
-            table_data.append(["Longitud del Camino (aristas)", resultado['path_length']])
-            table_data.append(["Secuencia del Camino", " → ".join(path_str_list)])
-            table_data.append(["Domiciliarios Únicos (sin repetir)", f"{lt.size(unique_deliverers_list)} únicos"])
-            table_data.append(["Lista de Domiciliarios", ", ".join(deliverers_str_list) if len(deliverers_str_list) > 0 else "Ninguno"])
-            table_data.append(["Restaurantes Encontrados", f"{lt.size(restaurants_list)} restaurantes"])
-            table_data.append(["Lista de Restaurantes", ", ".join(restaurants_str_list) if len(restaurants_str_list) > 0 else "Ninguno"])
+            # Mostrar secuencia del camino (limitada si es muy larga)
+            if len(path_list) <= 10:
+                sequence_str = " → ".join(path_list)
+            else:
+                sequence_str = " → ".join(path_list[:5]) + " → ... → " + " → ".join(path_list[-5:])
+            table_data.append(["Secuencia del Camino", sequence_str])
+            
+            # Mostrar domiciliarios
+            table_data.append(["Domiciliarios únicos", len(dom_list)])
+            if len(dom_list) <= 15:
+                dom_display = ", ".join(dom_list) if dom_list else "Ninguno"
+            else:
+                dom_display = f"{', '.join(dom_list[:15])}... (+{len(dom_list)-15} más)"
+            table_data.append(["Lista de Domiciliarios", dom_display])
+            
+            # Mostrar restaurantes
+            table_data.append(["Restaurantes encontrados", len(rest_list)])
+            rest_display = ", ".join(rest_list) if rest_list else "Ninguno"
+            table_data.append(["Lista de Restaurantes", rest_display])
             
         else:
-            table_data.append(["Tiempo de Ejecución (ms)", round(resultado['execution_time'], 3)])
-            table_data.append(["Camino Encontrado", " No"])
-            table_data.append(["Motivo", resultado['error']])
-            table_data.append(["Cantidad de puntos en el camino", "N/A"])
-            table_data.append(["Longitud del Camino (aristas)", "N/A"])
+            table_data.append(["Estado", "❌ No se encontró camino"])
+            table_data.append(["Longitud del camino", "N/A"])
             table_data.append(["Secuencia del Camino", "N/A"])
-            table_data.append(["Domiciliarios Únicos", "N/A"])
-            table_data.append(["Restaurantes Encontrados", "N/A"])
+            table_data.append(["Domiciliarios únicos", "N/A"])
+            table_data.append(["Restaurantes encontrados", "N/A"])
         
         print("\n--- Resultado Requerimiento 1 ---")
         print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="grid"))
         print()
         
+        # Mostrar sugerencias si no se encontró camino
+        if resultado['points_count'] == 0:
+            print("💡 Sugerencias:")
+            print("   - Verifique que las coordenadas sean correctas")
+            print("   - Asegúrese de que los puntos existan en el dataset cargado") 
+            print("   - Intente con otros puntos geográficos")
+            print("   - Verifique que los datos estén correctamente cargados")
+            print()
+        
     except Exception as e:
         print(f" Error en requerimiento 1: {e}")
+        print("\n🔍 Información de depuración:")
         import traceback
         traceback.print_exc()
+        print("\n💡 Posibles soluciones:")
+        print("   - Verifique que los datos estén cargados correctamente")
+        print("   - Asegúrese de usar el formato correcto de coordenadas")
+        print("   - Intente reiniciar el programa y cargar los datos nuevamente")
+        print()
 
 def print_req_2(control):
     """

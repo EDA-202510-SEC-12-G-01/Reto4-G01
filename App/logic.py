@@ -135,101 +135,140 @@ def load_data(catalog, filename):
     time_elapsed = delta_time(start, end_time)
     return total_doms, total_persons, total_nodes, total_edges, total_rest, total_dloc, avg_time, time_elapsed
 
-def req_1(catalog, origin_id, dest_id):
+def req_1(catalog, A, B):
     """
     REQ 1 CORREGIDO: Encuentra un camino simple entre dos ubicaciones geográficas
     """
-    start_time = time.perf_counter()
+    start = get_time()
     
-    # Obtener el grafo del catálogo
-    graph = catalog['graph']
-    
-    # Validar que los vértices existan
-    if not gr.contains_vertex(graph, origin_id):
-        return {
-            'path_exists': False,
-            'error': f"El vértice de origen '{origin_id}' no existe en el grafo.",
-            'execution_time': (time.perf_counter() - start_time) * 1000
-        }
-    
-    if not gr.contains_vertex(graph, dest_id):
-        return {
-            'path_exists': False,
-            'error': f"El vértice de destino '{dest_id}' no existe en el grafo.",
-            'execution_time': (time.perf_counter() - start_time) * 1000
-        }
-
-    # Ejecutar BFS desde el origen
-    bfs_search_results = bfs_alg.bfs(graph, origin_id)
-    
-    # ✅ CORREGIDO: Usar las funciones correctas de bfs.py
-    path_exists = bfs_alg.has_path_to(bfs_search_results, dest_id)
-    
-    if not path_exists:
-        return {
-            'path_exists': False,
-            'error': f"No existe un camino entre '{origin_id}' y '{dest_id}'.",
-            'path_length': 0,
-            'path_sequence': lt.new_list(),
-            'unique_deliverers': lt.new_list(),
-            'restaurants': lt.new_list(),
-            'execution_time': (time.perf_counter() - start_time) * 1000
-        }
-
-    # ✅ CORREGIDO: Obtener el camino usando la función correcta
-    path_stack = bfs_alg.path_to(bfs_search_results, dest_id)
-    
-    # Convertir stack a lista
-    path_list = lt.new_list()
-    while not st.is_empty(path_stack):
-        lt.add_first(path_list, st.pop(path_stack))
-
-    # ✅ CORREGIDO: Extraer domiciliarios usando la estructura real
-    unique_deliverers = lt.new_list()
-    restaurants_list = lt.new_list()
-    deliverer_set = {}  # Set temporal para evitar duplicados
-    
-    # Recorrer cada nodo del camino
-    for i in range(lt.size(path_list)):
-        node_id = lt.get_element(path_list, i)
+    try:
+        # Convertir a string para evitar problemas de tipo
+        A = str(A).strip()
+        B = str(B).strip()
         
-        # Obtener lista de domiciliarios de cada nodo
-        try:
-            node_deliverers = gr.get_vertex_information(graph, node_id)
-            if node_deliverers is not None:
-                # node_deliverers es una array_list con IDs de domiciliarios
-                for j in range(lt.size(node_deliverers)):
-                    deliverer_id = lt.get_element(node_deliverers, j)
-                    # Agregar solo si no está duplicado
-                    if deliverer_id not in deliverer_set:
-                        deliverer_set[deliverer_id] = True
-                        lt.add_last(unique_deliverers, deliverer_id)
-        except:
-            pass  # Si no hay información, continuar
+        # Validar que los vértices existan
+        if not gr.contains_vertex(catalog['graph'], A):
+            end = get_time()
+            return {
+                'execution_time': delta_time(start, end),
+                'points_count': 0,
+                'path': al.new_list(),
+                'domiciliarios': al.new_list(),
+                'restaurants': al.new_list(),
+                'message': f'El vértice de origen {A} no existe en el grafo.'
+            }
         
-        # ✅ CORREGIDO: Identificar restaurantes usando la estructura real
-        restaurant_locations = catalog['restaurant_locations']
-        for k in range(lt.size(restaurant_locations)):
-            restaurant_node = lt.get_element(restaurant_locations, k)
-            if restaurant_node == node_id:
-                # Verificar que no esté duplicado
-                found = False
-                for l in range(lt.size(restaurants_list)):
-                    if lt.get_element(restaurants_list, l) == node_id:
-                        found = True
-                        break
-                if not found:
-                    lt.add_last(restaurants_list, node_id)
-                break
-
-    return {
-        'path_exists': True,
-        'path_length': lt.size(path_list) - 1,  # Número de aristas
-        'path_sequence': path_list,
-        'unique_deliverers': unique_deliverers,
-        'restaurants': restaurants_list,
-        'execution_time': (time.perf_counter() - start_time) * 1000
-    }
+        if not gr.contains_vertex(catalog['graph'], B):
+            end = get_time()
+            return {
+                'execution_time': delta_time(start, end),
+                'points_count': 0,
+                'path': al.new_list(),
+                'domiciliarios': al.new_list(),       
+                'restaurants': al.new_list(),
+                'message': f'El vértice de destino {B} no existe en el grafo.'
+            }
+        
+        # Caso especial: mismo vértice
+        if A == B:
+            path = al.new_list()
+            al.add_last(path, A)
+            
+            # Obtener domiciliarios del punto único
+            doms = al.new_list()
+            try:
+                pids_list = gr.get_vertex_information(catalog['graph'], A)
+                if pids_list is not None:
+                    for i in range(al.size(pids_list)):
+                        pid = al.get_element(pids_list, i)
+                        if not al.contains(doms, pid):
+                            al.add_last(doms, pid)
+            except:
+                pass
+            
+            # Verificar si es restaurante
+            rests = al.new_list()
+            if al.contains(catalog['restaurant_locations'], A):
+                al.add_last(rests, A)
+            
+            end = get_time()
+            return {
+                'execution_time': delta_time(start, end),
+                'points_count': 1,
+                'path': path,
+                'domiciliarios': doms,
+                'restaurants': rests,
+                'message': f'Camino encontrado (mismo punto de origen y destino).'
+            }
+        
+        # Ejecutar DFS desde A
+        search = dfs.dfs(catalog['graph'], A)
+        
+        # Verificar si existe camino hacia B
+        if not dfs.has_path_to(B, search):
+            end = get_time()
+            return {
+                'execution_time': delta_time(start, end),
+                'points_count': 0,
+                'path': al.new_list(),
+                'domiciliarios': al.new_list(),
+                'restaurants': al.new_list(),
+                'message': f'No hay conexión entre {A} y {B}.'
+            }
+        
+        # Obtener el camino
+        path_stack = dfs.path_to(B, search)
+        
+        # Convertir stack a lista (CORRECCIÓN: usar st en lugar de stk)
+        path = al.new_list()
+        while not st.is_empty(path_stack):
+            al.add_last(path, st.pop(path_stack))
+        
+        # Obtener domiciliarios únicos del camino
+        doms = al.new_list()
+        for i in range(al.size(path)):  # CORRECCIÓN: usar índice en lugar de iterator
+            loc = al.get_element(path, i)
+            try:
+                pids_list = gr.get_vertex_information(catalog['graph'], loc)
+                if pids_list is not None:
+                    for j in range(al.size(pids_list)):
+                        pid = al.get_element(pids_list, j)
+                        if not al.contains(doms, pid):
+                            al.add_last(doms, pid)
+            except:
+                continue  # Si no hay información, continuar
+        
+        # Obtener restaurantes en el camino
+        rests = al.new_list()
+        for i in range(al.size(path)):  # CORRECCIÓN: usar índice en lugar de iterator
+            loc = al.get_element(path, i)
+            if al.contains(catalog['restaurant_locations'], loc):
+                if not al.contains(rests, loc):  # Evitar duplicados
+                    al.add_last(rests, loc)
+        
+        end = get_time()
+        time_elapsed = delta_time(start, end)
+        
+        # CORRECCIÓN: Retornar diccionario consistente
+        return {
+            'execution_time': round(time_elapsed, 3),
+            'points_count': al.size(path),
+            'path': path,
+            'domiciliarios': doms,
+            'restaurants': rests,
+            'message': f'Camino encontrado entre {A} y {B}.'
+        }
+        
+    except Exception as e:
+        end = get_time()
+        return {
+            'execution_time': delta_time(start, end),
+            'points_count': 0,
+            'path': al.new_list(),
+            'domiciliarios': al.new_list(),
+            'restaurants': al.new_list(),
+            'message': f'Error durante la ejecución: {str(e)}'
+        }
 
 def req_2(catalog):
     """Retorna el resultado del requerimiento 2"""
