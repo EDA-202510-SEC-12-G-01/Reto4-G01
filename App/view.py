@@ -352,7 +352,7 @@ def print_req_5(control):
 
 def print_req_6(control):
     """
-    REQ 6: Función que imprime la solución del Requerimiento 6 en consola
+    REQ 6 CORREGIDO: Función que imprime la solución del Requerimiento 6 en consola
     """
     print("\n" + "="*60)
     print("REQUERIMIENTO 6: CAMINOS DE COSTO MÍNIMO DESDE UN PUNTO")
@@ -361,57 +361,143 @@ def print_req_6(control):
     try:
         print("Ingrese el ID del punto geográfico de origen:")
         print("Formato esperado: 22.7446_75.8944")
+        print("También puede usar coordenadas separadas como: 22.7446 75.8944")
         print()
         
-        origen = input(" Punto geográfico de origen: ").strip()
+        # Función auxiliar para validar y formatear coordenadas (igual que en req_1 y req_3)
+        def process_input(user_input):
+            user_input = user_input.strip()
+            
+            # Si ya viene en formato correcto (lat_lon)
+            if '_' in user_input and len(user_input.split('_')) == 2:
+                parts = user_input.split('_')
+                try:
+                    lat = float(parts[0])
+                    lon = float(parts[1])
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Si viene como "lat lon" (separado por espacio)
+            elif ' ' in user_input and len(user_input.split()) == 2:
+                parts = user_input.split()
+                try:
+                    lat = float(parts[0])
+                    lon = float(parts[1])
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Si viene como "lat,lon" (separado por coma)
+            elif ',' in user_input and len(user_input.split(',')) == 2:
+                parts = user_input.split(',')
+                try:
+                    lat = float(parts[0].strip())
+                    lon = float(parts[1].strip())
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Devolver tal como está
+            return user_input
         
-        if not origen:
+        origen_input = input(" Punto geográfico de origen: ").strip()
+        
+        if not origen_input:
             print(" El ID del punto no puede estar vacío")
             return
         
+        # Procesar la entrada
+        origen = process_input(origen_input)
+        
+        print(f"\n Procesando entrada:")
+        print(f"   Origen: '{origen_input}' → '{origen}'")
         print(f"\n Calculando caminos de costo mínimo desde '{origen}'...")
         
+        # Ejecutar requerimiento
         resultado = logic.req_6(control, origen)
         
-        # Convertir lista de alcanzables a Python list para mostrar
-        alcanzables_list = []
-        alcanzables = resultado['alcanzables']
-        for i in range(lt.size(alcanzables)):
-            alcanzables_list.append(lt.get_element(alcanzables, i))
+        # Preparar tabla de resultados principales
+        table_data = []
+        table_data.append(["Tiempo de Ejecución (ms)", resultado['tiempo_ms']])
         
-        # Convertir ruta más larga a Python list
-        ruta_list = []
-        ruta_max = resultado['ruta_mas_larga']
-        for i in range(lt.size(ruta_max)):
-            ruta_list.append(lt.get_element(ruta_max, i))
-        
-        # Mostrar alcanzables en grupos de 5
-        print(f"\n RESULTADOS:")
-        print(f"  Tiempo de ejecución: {resultado['tiempo_ms']} ms")
-        print(f" Ubicaciones alcanzables: {resultado['cantidad_ubicaciones']}")
-        print()
-        
-        print("  UBICACIONES ALCANZABLES:")
-        if alcanzables_list:
-            grupos = [alcanzables_list[i:i+5] for i in range(0, len(alcanzables_list), 5)]
-            for grupo in grupos:
-                print("     " + ", ".join(grupo))
+        if resultado['error'] is None:
+            # Caso exitoso
+            table_data.append(["Estado", "✅ Análisis completado"])
+            table_data.append(["Punto de origen", resultado.get('punto_origen', origen)])
+            table_data.append(["Ubicaciones alcanzables", resultado['cantidad_ubicaciones']])
+            table_data.append(["Vértice más lejano", resultado.get('vertice_mas_lejano', 'N/A')])
+            table_data.append(["Tiempo a vértice más lejano (min)", f"{resultado['tiempo_ruta_mas_larga']:.2f}"])
+            table_data.append(["Longitud de ruta más larga", al.size(resultado['ruta_mas_larga'])])
+            
         else:
-            print("     Ninguna ubicación alcanzable")
+            # Caso con error
+            table_data.append(["Estado", "❌ Error en el análisis"])
+            table_data.append(["Motivo", resultado['error']])
+            table_data.append(["Ubicaciones alcanzables", "N/A"])
+            table_data.append(["Vértice más lejano", "N/A"])
+            table_data.append(["Tiempo máximo", "N/A"])
         
-        print(f"\n RUTA DE MAYOR TIEMPO MÍNIMO:")
-        print(f"     Tiempo total: {resultado['tiempo_ruta_mas_larga']:.2f} minutos")
-        if ruta_list:
-            print(f"     Secuencia: {' → '.join(ruta_list)}")
-        else:
-            print("     No hay ruta disponible")
+        print("\n--- Resultado Requerimiento 6 ---")
+        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="grid"))
+        
+        # Mostrar ubicaciones alcanzables si las hay
+        if resultado['error'] is None and resultado['cantidad_ubicaciones'] > 0:
+            print(f"\n📍 UBICACIONES ALCANZABLES (ordenadas alfabéticamente):")
+            
+            # Convertir lista de alcanzables a Python list
+            alcanzables_list = []
+            alcanzables = resultado['alcanzables']
+            for i in range(al.size(alcanzables)):
+                alcanzables_list.append(al.get_element(alcanzables, i))
+            
+            # Mostrar en grupos de 5 para mejor legibilidad
+            if alcanzables_list:
+                print(f"   Total: {len(alcanzables_list)} ubicaciones")
+                print()
+                grupos = [alcanzables_list[i:i+5] for i in range(0, len(alcanzables_list), 5)]
+                for i, grupo in enumerate(grupos):
+                    print(f"   {i*5+1:3d}-{min((i+1)*5, len(alcanzables_list)):3d}: {', '.join(grupo)}")
+            
+            # Mostrar ruta más larga si existe
+            if al.size(resultado['ruta_mas_larga']) > 0:
+                print(f"\n🛣️  RUTA DE MAYOR TIEMPO MÍNIMO:")
+                print(f"   Destino: {resultado.get('vertice_mas_lejano', 'N/A')}")
+                print(f"   Tiempo total: {resultado['tiempo_ruta_mas_larga']:.2f} minutos")
+                
+                # Convertir ruta a Python list
+                ruta_list = []
+                ruta_max = resultado['ruta_mas_larga']
+                for i in range(al.size(ruta_max)):
+                    ruta_list.append(al.get_element(ruta_max, i))
+                
+                if ruta_list:
+                    if len(ruta_list) <= 10:
+                        secuencia = ' → '.join(ruta_list)
+                    else:
+                        secuencia = f"{' → '.join(ruta_list[:5])} → ... → {' → '.join(ruta_list[-5:])}"
+                    print(f"   Secuencia: {secuencia}")
+                    print(f"   Longitud: {len(ruta_list)} puntos, {len(ruta_list)-1} aristas")
+            
+        elif resultado['error'] is not None:
+            print("\n💡 Sugerencias:")
+            print("   - Verifique que las coordenadas sean correctas")
+            print("   - Asegúrese de que el punto exista en el dataset cargado")
+            print("   - Intente con otros puntos geográficos")
+            print("   - Verifique que los datos estén correctamente cargados")
         
         print()
         
     except Exception as e:
         print(f" Error en requerimiento 6: {e}")
+        print("\n🔍 Información de depuración:")
         import traceback
         traceback.print_exc()
+        print("\n💡 Posibles soluciones:")
+        print("   - Verifique que los datos estén cargados correctamente")
+        print("   - Asegúrese de usar el formato correcto de coordenadas")
+        print("   - Intente reiniciar el programa y cargar los datos nuevamente")
+        print()
 
 def print_req_7(control):
     """

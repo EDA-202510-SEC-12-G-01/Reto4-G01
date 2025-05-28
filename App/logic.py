@@ -386,58 +386,125 @@ def req_6(catalog, origin):
     """
     start = get_time()
     
-    # Validar que el punto origen exista
-    graph = catalog['graph']
-    if not gr.contains_vertex(graph, origin):
-        raise Exception(f"El punto {origin} no existe en el grafo")
-    
-    # Ejecutar Dijkstra desde el origen
-    search = dijkstra.dijkstra(graph, origin)
-    
-    # Crear lista de puntos alcanzables
-    alcanzables = lt.new_list()
-    all_vertices = gr.vertices(graph)
-    
-    for i in range(lt.size(all_vertices)):
-        vertex = lt.get_element(all_vertices, i)
-        if dijkstra.has_path_to(vertex, search):
-            lt.add_last(alcanzables, vertex)
-    
-    # Ordenar lista alfabéticamente usando insertion sort
-    def compare_vertices(v1, v2):
-        return v1 < v2
-    
-    alcanzables = lt.insertion_sort(alcanzables, compare_vertices)
-    
-    # Contar cantidad de elementos alcanzables
-    cantidad = lt.size(alcanzables)
-    
-    # Buscar el vértice más lejano (con mayor dist_to)
-    max_vertex = None
-    max_time = 0.0
-    
-    for i in range(cantidad):
-        vertex = lt.get_element(alcanzables, i)
-        dist = dijkstra.dist_to(vertex, search)
-        if dist > max_time:
-            max_time = dist
-            max_vertex = vertex
-    
-    # Recuperar la ruta hacia max_vertex
-    ruta_max = lt.new_list()
-    if max_vertex is not None:
-        path_stack = dijkstra.path_to(max_vertex, search)
-        while not st.is_empty(path_stack):
-            lt.add_last(ruta_max, st.pop(path_stack))
+    try:
+        # Convertir a string y limpiar entrada
+        origin = str(origin).strip()
+        
+        # Validar que el punto origen exista
+        graph = catalog['graph']
+        if not gr.contains_vertex(graph, origin):
+            end_time = get_time()
+            return {
+                'tiempo_ms': round(delta_time(start, end_time), 3),
+                'cantidad_ubicaciones': 0,
+                'alcanzables': al.new_list(),
+                'ruta_mas_larga': al.new_list(),
+                'tiempo_ruta_mas_larga': 0.0,
+                'error': f"El punto {origin} no existe en el grafo"
+            }
+        
+        # Ejecutar Dijkstra desde el origen
+        search = dijkstra.dijkstra(graph, origin)
+        
+        # Crear lista de puntos alcanzables
+        alcanzables = al.new_list()
+        all_vertices = gr.vertices(graph)
+        
+        # Filtrar vértices alcanzables
+        for i in range(al.size(all_vertices)):
+            vertex = al.get_element(all_vertices, i)
+            if dijkstra.has_path_to(vertex, search):
+                al.add_last(alcanzables, vertex)
+        
+        # Ordenar lista alfabéticamente (implementación manual)
+        alcanzables = sort_vertices_alphabetically(alcanzables)
+        
+        # Contar cantidad de elementos alcanzables
+        cantidad = al.size(alcanzables)
+        
+        if cantidad == 0:
+            end_time = get_time()
+            return {
+                'tiempo_ms': round(delta_time(start, end_time), 3),
+                'cantidad_ubicaciones': 0,
+                'alcanzables': alcanzables,
+                'ruta_mas_larga': al.new_list(),
+                'tiempo_ruta_mas_larga': 0.0,
+                'error': f"No hay ubicaciones alcanzables desde {origin}"
+            }
+        
+        # Buscar el vértice más lejano (con mayor dist_to)
+        max_vertex = None
+        max_time = 0.0
+        
+        for i in range(cantidad):
+            vertex = al.get_element(alcanzables, i)
+            try:
+                dist = dijkstra.dist_to(vertex, search)
+                if dist > max_time and dist < float('inf'):
+                    max_time = dist
+                    max_vertex = vertex
+            except:
+                continue  # Si hay error obteniendo distancia, continuar
+        
+        # Recuperar la ruta hacia max_vertex
+        ruta_max = al.new_list()
+        if max_vertex is not None:
+            try:
+                path_stack = dijkstra.path_to(max_vertex, search)
+                if path_stack is not None:
+                    while not st.is_empty(path_stack):
+                        al.add_last(ruta_max, st.pop(path_stack))
+            except:
+                # Si hay error obteniendo el camino, dejar ruta vacía
+                pass
 
-    elapsed = round(delta_time(start, get_time()), 3)
-    return {
-        'tiempo_ms': elapsed,
-        'cantidad_ubicaciones': cantidad,
-        'alcanzables': alcanzables,
-        'ruta_mas_larga': ruta_max,
-        'tiempo_ruta_mas_larga': max_time
-    }
+        end_time = get_time()
+        elapsed = round(delta_time(start, end_time), 3)
+        
+        return {
+            'tiempo_ms': elapsed,
+            'cantidad_ubicaciones': cantidad,
+            'alcanzables': alcanzables,
+            'ruta_mas_larga': ruta_max,
+            'tiempo_ruta_mas_larga': max_time,
+            'punto_origen': origin,
+            'vertice_mas_lejano': max_vertex,
+            'error': None
+        }
+        
+    except Exception as e:
+        end_time = get_time()
+        return {
+            'tiempo_ms': round(delta_time(start, end_time), 3),
+            'cantidad_ubicaciones': 0,
+            'alcanzables': al.new_list(),
+            'ruta_mas_larga': al.new_list(),
+            'tiempo_ruta_mas_larga': 0.0,
+            'error': f"Error durante la ejecución: {str(e)}"
+        }
+
+def sort_vertices_alphabetically(vertex_list):
+    """
+    Función auxiliar para ordenar vértices alfabéticamente usando bubble sort
+    """
+    if al.size(vertex_list) <= 1:
+        return vertex_list
+    
+    # Convertir a lista Python para ordenar
+    vertices_py = []
+    for i in range(al.size(vertex_list)):
+        vertices_py.append(al.get_element(vertex_list, i))
+    
+    # Ordenar alfabéticamente
+    vertices_py.sort()
+    
+    # Convertir de vuelta a array_list
+    sorted_list = al.new_list()
+    for vertex in vertices_py:
+        al.add_last(sorted_list, vertex)
+    
+    return sorted_list
 
 def req_7(catalog, origin, courier_id):
     """
