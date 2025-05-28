@@ -35,12 +35,12 @@ def bfs(my_graph, source):
         'marked': marked
     }
 
-def has_path_to_bfs(search, key_v):
+def has_path_to(search, key_v):
     marked = search['marked']
     return mlp.contains(marked, key_v) and mlp.get(marked, key_v) is True
 
-def path_to_bfs(search, key_v):
-    if not has_path_to_bfs(search, key_v):
+def path_to(search, key_v):
+    if not has_path_to(search, key_v):
         return None
     
     path = s.new_stack()

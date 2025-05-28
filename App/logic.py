@@ -15,6 +15,9 @@ from DataStructures.List.list_iterator import iterator
 from DataStructures.List import array_list as al
 from DataStructures.Map import map_linear_probing as lp
 from DataStructures.Graph import digraph as gr
+from DataStructures.Graph import bfs
+from DataStructures.Graph import dfs
+from DataStructures.Stack import stack as stk
 
 data_dir = os.path.dirname(os.path.realpath("__file__")) + "\\Data\\"
 
@@ -29,10 +32,10 @@ def new_logic(size = 1000):
     Crea el catálogo para almacenar las estructuras de datos
     """
     catalog =  {
-        'graph': gr.new_graph(10000),
-        'nodes': lp.new_map(2000, 0.5),
-        'domiciliarios_ultimos_destinos': lp.new_map(1000, 0.5),
-        'domiciliarios_ultimos_tiempos': lp.new_map(1000, 0.5),
+        'graph': gr.new_graph(size),
+        'nodes': lp.new_map(size, 0.5),
+        'domiciliarios_ultimos_destinos': lp.new_map(size, 0.5),
+        'domiciliarios_ultimos_tiempos': lp.new_map(size, 0.5),
         'restaurant_locations': al.new_list(),
         'delivery_locations': al.new_list(),
         'total_delivery_time': 0.0,
@@ -124,8 +127,55 @@ def load_data(catalog, filename):
 
 # Funciones de requerimientos restantes (placeholder)
 def req_1(catalog, A, B):
-    """Retorna el resultado del requerimiento 1"""
-    pass
+    start = get_time()
+
+    if not gr.contains_vertex(catalog['graph'], A) or not gr.contains_vertex(catalog['graph'], B):
+        end = get_time()
+        return {
+            'execution_time': delta_time(start, end),
+            'points_count': 0,
+            'path': [],
+            'domiciliarios': [],
+            'restaurants': [],
+            'message': f'No existe un camino entre {A} y {B}.'
+        }
+
+    search = dfs.dfs(catalog['graph'], A)
+
+    if not dfs.has_path_to(B, search):
+        end = get_time()
+        return {
+            'execution_time': delta_time(start, end),
+            'points_count': 0,
+            'path': [],
+            'domiciliarios': [],
+            'restaurants': [],
+            'message': f'No hay conexión entre {A} y {B}.'
+        }
+
+    path_stack = dfs.path_to(B, search)
+    path = []
+    while not stk.is_empty(path_stack):
+        path.append(stk.pop(path_stack))
+
+    doms = set()
+    rests = []
+    for loc in path:
+        info = lp.get(catalog['nodes'], loc)
+        if info:
+            for d in info['domiciliarios']:
+                doms.add(d)
+        if al.contains(catalog['restaurant_locations'], loc):
+            rests.append(loc)
+
+    end = get_time()
+    return {
+        'execution_time': delta_time(start, end),
+        'points_count': len(path),
+        'path': path,
+        'domiciliarios': list(doms),
+        'restaurants': rests
+    }
 
 def req_2(catalog):
     """Retorna el resultado del requerimiento 2"""
@@ -164,3 +214,6 @@ def delta_time(start, end):
     """devuelve la diferencia entre tiempos de procesamiento muestreados"""
     elapsed = float(end - start)
     return elapsed
+
+
+
