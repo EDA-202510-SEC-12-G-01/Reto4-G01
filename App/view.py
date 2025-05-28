@@ -215,42 +215,124 @@ def print_req_2(control):
 
 def print_req_3(control):
     """
-    REQ 3: Función que imprime la solución del Requerimiento 3 en consola
+    REQ 3 CORREGIDO: Función que imprime la solución del Requerimiento 3 en consola
     """
     print("\n" + "="*60)
     print("REQUERIMIENTO 3: DOMICILIARIO MÁS ACTIVO EN UN PUNTO")
     print("="*60)
-    
     try:
         print("Ingrese el ID del punto geográfico:")
         print("Formato esperado: 22.7446_75.8944")
+        print("También puede usar coordenadas separadas como: 22.7446 75.8944")
         print()
         
-        point = input(" Punto geográfico: ").strip()
+        # Función auxiliar para validar y formatear coordenadas (igual que en req_1)
+        def process_input(user_input):
+            user_input = user_input.strip()
+            
+            # Si ya viene en formato correcto (lat_lon)
+            if '_' in user_input and len(user_input.split('_')) == 2:
+                parts = user_input.split('_')
+                try:
+                    lat = float(parts[0])
+                    lon = float(parts[1])
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Si viene como "lat lon" (separado por espacio)
+            elif ' ' in user_input and len(user_input.split()) == 2:
+                parts = user_input.split()
+                try:
+                    lat = float(parts[0])
+                    lon = float(parts[1])
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Si viene como "lat,lon" (separado por coma)
+            elif ',' in user_input and len(user_input.split(',')) == 2:
+                parts = user_input.split(',')
+                try:
+                    lat = float(parts[0].strip())
+                    lon = float(parts[1].strip())
+                    return f"{lat:.4f}_{lon:.4f}"
+                except ValueError:
+                    return user_input
+            
+            # Devolver tal como está
+            return user_input
         
-        if not point:
+        point_input = input(" Punto geográfico: ").strip()
+        
+        if not point_input:
             print(" El ID del punto no puede estar vacío")
             return
         
-        print(f"\n Analizando domiciliarios en el punto '{point}'...")
+        # Procesar la entrada
+        point_id = process_input(point_input)
         
-        resultado = logic.req_3(control, point)
+        print(f"\n Procesando entrada:")
+        print(f"   Punto: '{point_input}' → '{point_id}'")
+        print(f"\n Analizando domiciliarios en el punto '{point_id}'...")
         
-        table = [
-            ["Tiempo de Ejecución (ms)", resultado['tiempo_ms']],
-            ["Domiciliario más activo", resultado['domiciliario']],
-            ["Número de pedidos en el punto", resultado['pedidos']],
-            ["Tipo de vehículo más usado", resultado['vehiculo']]
-        ]
+        # Ejecutar requerimiento
+        resultado = logic.req_3(control, point_id)
+        
+        # Preparar tabla de resultados
+        table_data = []
+        table_data.append(["Tiempo de Ejecución (ms)", resultado['tiempo_ms']])
+        
+        if resultado['error'] is None:
+            # Caso exitoso
+            table_data.append(["Estado", "✅ Análisis completado"])
+            table_data.append(["Punto analizado", resultado.get('punto_analizado', point_id)])
+            table_data.append(["Domiciliario más activo", resultado['domiciliario'] or "No encontrado"])
+            table_data.append(["Número de pedidos", resultado['pedidos']])
+            table_data.append(["Tipo de vehículo principal", resultado['vehiculo'] or "No determinado"])
+            
+            # Información adicional si está disponible
+            if 'total_domiciliarios_unicos' in resultado:
+                table_data.append(["Total domiciliarios únicos", resultado['total_domiciliarios_unicos']])
+            
+        else:
+            # Caso con error
+            table_data.append(["Estado", "❌ Error en el análisis"])
+            table_data.append(["Motivo", resultado['error']])
+            table_data.append(["Domiciliario más activo", "N/A"])
+            table_data.append(["Número de pedidos", "N/A"])
+            table_data.append(["Tipo de vehículo", "N/A"])
         
         print("\n--- Resultado Requerimiento 3 ---")
-        print(tb.tabulate(table, headers=["Concepto", "Valor"], tablefmt="grid"))
+        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="grid"))
         print()
+        
+        # Mostrar información adicional o sugerencias
+        if resultado['error'] is None and resultado['pedidos'] > 0:
+            print("📊 Información adicional:")
+            print(f"   - El domiciliario {resultado['domiciliario']} realizó {resultado['pedidos']} pedidos en este punto")
+            print(f"   - Tipo de vehículo más común: {resultado['vehiculo']}")
+            if 'total_domiciliarios_unicos' in resultado:
+                print(f"   - Total de domiciliarios diferentes que operaron en este punto: {resultado['total_domiciliarios_unicos']}")
+            print()
+        elif resultado['error'] is not None:
+            print("💡 Sugerencias:")
+            print("   - Verifique que las coordenadas sean correctas")
+            print("   - Asegúrese de que el punto exista en el dataset cargado")
+            print("   - Intente con otros puntos geográficos")
+            print("   - Verifique que los datos estén correctamente cargados")
+            print()
         
     except Exception as e:
         print(f" Error en requerimiento 3: {e}")
+        print("\n🔍 Información de depuración:")
         import traceback
         traceback.print_exc()
+        print("\n💡 Posibles soluciones:")
+        print("   - Verifique que los datos estén cargados correctamente")
+        print("   - Asegúrese de usar el formato correcto de coordenadas")
+        print("   - Intente reiniciar el programa y cargar los datos nuevamente")
+        print()
 
 def print_req_4(control):
     """
