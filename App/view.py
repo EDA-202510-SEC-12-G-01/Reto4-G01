@@ -149,7 +149,7 @@ def print_req_1(control):
             table_data.append(["Domiciliarios únicos", "N/A"])
             table_data.append(["Restaurantes encontrados", "N/A"])
         print("\n--- Resultado Requerimiento 1 ---")
-        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="grid"))
+        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="fancy_grid"))
         print()
         if resultado['points_count'] == 0:
             print(" Sugerencias:")
@@ -245,7 +245,7 @@ def print_req_3(control):
             table_data.append(["Número de pedidos", "N/A"])
             table_data.append(["Tipo de vehículo", "N/A"])
         print("\n--- Resultado Requerimiento 3 ---")
-        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="grid"))
+        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="fancy_grid"))
         print()
         if resultado['error'] is None and resultado['pedidos'] > 0:
             print(" Información adicional:")
@@ -278,9 +278,14 @@ def print_req_4(control):
     """
         Función que imprime la solución del Requerimiento 4 en consola
     """
-    print("\n--- Requerimiento 4 ---")
-    print(" Por implementar")
-    print()
+    origen = input("Ingrese Punto A (latitud_longitud): ").strip()
+    destino = input("Ingrese Punto B (latitud_longitud): ").strip()
+    tiempo_ms, path, comunes = logic.req_4(control, origen, destino)
+    seq = [al.get_element(path, i) for i in range(al.size(path))]
+    com = [al.get_element(comunes, i) for i in range(al.size(comunes))]
+    print("Tiempo de ejecución (ms):", round(tiempo_ms, 3))
+    print("Secuencia de ubicaciones:", " -> ".join(seq) if seq else "Ninguno")
+    print("Domiciliarios en común:", ", ".join(com) if com else "Ninguno")
 
 
 
@@ -358,7 +363,7 @@ def print_req_6(control):
             table_data.append(["Vértice más lejano", "N/A"])
             table_data.append(["Tiempo máximo", "N/A"])
         print("\n--- Resultado Requerimiento 6 ---")
-        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="grid"))
+        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="fancy_grid"))
         if resultado['error'] is None and resultado['cantidad_ubicaciones'] > 0:
             print(f"\n UBICACIONES ALCANZABLES (ordenadas alfabéticamente):")
             alcanzables_list = []
@@ -474,7 +479,7 @@ def print_req_7(control):
             table_data.append(["Ubicaciones en sub-red", resultado['cantidad_ubicaciones']])
             table_data.append(["Tiempo total del MST", "N/A"])
         print("\n--- Resultado Requerimiento 7 ---")
-        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="grid"))
+        print(tb.tabulate(table_data, headers=["Concepto", "Valor"], tablefmt="fancy_grid"))
         if resultado['cantidad_ubicaciones'] > 0:
             print(f"\n UBICACIONES EN LA SUB-RED (ordenadas alfabéticamente):")
             ubicaciones_list = []

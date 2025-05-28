@@ -11,7 +11,7 @@ from DataStructures.List.list_iterator import iterator
 from DataStructures.List import array_list as lt 
 from DataStructures.Map import map_linear_probing as mp 
 from DataStructures.Graph import udgraph as gr 
-from DataStructures.Graph import bfs as bfs_alg 
+from DataStructures.Graph import bfs as bfs
 from DataStructures.Graph import dfs 
 from DataStructures.Stack import stack as st 
 from DataStructures.Graph import dijkstra 
@@ -318,9 +318,44 @@ def req_3(catalog, point_id):
         
         
         
-def req_4(catalog):
+def req_4(catalog, A, B):
     """Retorna el resultado del requerimiento 4"""
-    pass
+    start = get_time()
+    if not gr.contains_vertex(catalog['graph'], A) or not gr.contains_vertex(catalog['graph'], B):
+        end = get_time()
+        empty = al.new_list()
+        return round(delta_time(start, end), 3), empty, empty
+
+    search = bfs.bfs(catalog['graph'], A)
+    if not bfs.has_path_to(B, search):
+        end = get_time()
+        empty = al.new_list()
+        return round(delta_time(start, end), 3), empty, empty
+
+    stack = bfs.path_to(B, search)
+    path = al.new_list()
+    while not st.is_empty(stack):
+        al.add_last(path, st.pop(stack))
+    common = None
+    for loc in iterator(path):
+        loc_doms = gr.get_vertex_information(catalog['graph'], loc)
+        if common is None:
+            common = al.new_list()
+            for i in range(al.size(loc_doms)):
+                al.add_last(common, al.get_element(loc_doms, i))
+        else:
+            filtered = al.new_list()
+            for i in range(al.size(common)):
+                pid = al.get_element(common, i)
+                if al.contains(loc_doms, pid):
+                    al.add_last(filtered, pid)
+            common = filtered
+
+    if common is None:
+        common = al.new_list()
+
+    end = get_time()
+    return round(delta_time(start, end), 3), path, common
 
 
 
