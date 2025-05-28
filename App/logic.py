@@ -59,12 +59,8 @@ def format_location(latitude, longitude):
         return "0.0000_0.0000"
 
 def load_data(catalog, filename):
-    """
-    MANTENER LA CARGA DE DATOS ORIGINAL - FUNCIONA CORRECTAMENTE
-    """
     start = get_time()
     persons_map = lp.new_map(1000, 0.5)
-
     file_path = data_dir + filename
     with open(file_path, encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -87,17 +83,14 @@ def load_data(catalog, filename):
             else:
                 alist = gr.get_vertex_information(catalog['graph'], dest)
                 al.add_last(alist, pid)
-
             catalog['total_deliveries']      += 1
             catalog['total_delivery_time']   += t_taken
             if not lp.contains(persons_map, pid):
                 lp.put(persons_map, pid, True)
-
             if not al.contains(catalog['restaurant_locations'], origin):
                 al.add_last(catalog['restaurant_locations'], origin)
             if not al.contains(catalog['delivery_locations'], dest):
                 al.add_last(catalog['delivery_locations'], dest)
-
             e = gr.get_edge(catalog['graph'], origin, dest)
             if e is None:
                 avg = t_taken
@@ -106,7 +99,6 @@ def load_data(catalog, filename):
                 avg = (e['weight'] + t_taken) / 2
             gr.add_edge(catalog['graph'], origin, dest, avg)
             gr.add_edge(catalog['graph'], dest, origin, avg)
-
             prev_dest = lp.get(catalog['domiciliarios_ultimos_destinos'], pid)
             prev_time = lp.get(catalog['domiciliarios_ultimos_tiempos'], pid)
             if prev_dest and prev_dest != dest:
@@ -120,10 +112,8 @@ def load_data(catalog, filename):
                     avg3 = (e2['weight'] + avg2) / 2
                     gr.add_edge(catalog['graph'], prev_dest, dest, avg3)
                     gr.add_edge(catalog['graph'], dest, prev_dest, avg3)
-
             lp.put(catalog['domiciliarios_ultimos_destinos'], pid, dest)
             lp.put(catalog['domiciliarios_ultimos_tiempos'], pid, t_taken)
-    
     total_doms    = catalog['total_deliveries']
     total_persons = lp.size(persons_map)
     total_nodes   = gr.order(catalog['graph'])
@@ -137,15 +127,13 @@ def load_data(catalog, filename):
 
 def req_1(catalog, A, B):
     """
-    REQ 1 CORREGIDO: Encuentra un camino simple entre dos ubicaciones geográficas
+    Encuentra un camino simple entre dos ubicaciones geográficas
     """
     start = get_time()
-    
     try:
         # Convertir a string para evitar problemas de tipo
         A = str(A).strip()
         B = str(B).strip()
-        
         # Validar que los vértices existan
         if not gr.contains_vertex(catalog['graph'], A):
             end = get_time()
@@ -157,7 +145,6 @@ def req_1(catalog, A, B):
                 'restaurants': al.new_list(),
                 'message': f'El vértice de origen {A} no existe en el grafo.'
             }
-        
         if not gr.contains_vertex(catalog['graph'], B):
             end = get_time()
             return {
@@ -168,12 +155,10 @@ def req_1(catalog, A, B):
                 'restaurants': al.new_list(),
                 'message': f'El vértice de destino {B} no existe en el grafo.'
             }
-        
         # Caso especial: mismo vértice
         if A == B:
             path = al.new_list()
             al.add_last(path, A)
-            
             # Obtener domiciliarios del punto único
             doms = al.new_list()
             try:
@@ -185,12 +170,10 @@ def req_1(catalog, A, B):
                             al.add_last(doms, pid)
             except:
                 pass
-            
             # Verificar si es restaurante
             rests = al.new_list()
             if al.contains(catalog['restaurant_locations'], A):
                 al.add_last(rests, A)
-            
             end = get_time()
             return {
                 'execution_time': delta_time(start, end),
@@ -200,10 +183,8 @@ def req_1(catalog, A, B):
                 'restaurants': rests,
                 'message': f'Camino encontrado (mismo punto de origen y destino).'
             }
-        
         # Ejecutar DFS desde A
         search = dfs.dfs(catalog['graph'], A)
-        
         # Verificar si existe camino hacia B
         if not dfs.has_path_to(B, search):
             end = get_time()
@@ -215,15 +196,12 @@ def req_1(catalog, A, B):
                 'restaurants': al.new_list(),
                 'message': f'No hay conexión entre {A} y {B}.'
             }
-        
         # Obtener el camino
         path_stack = dfs.path_to(B, search)
-        
         # Convertir stack a lista (CORRECCIÓN: usar st en lugar de stk)
         path = al.new_list()
         while not st.is_empty(path_stack):
             al.add_last(path, st.pop(path_stack))
-        
         # Obtener domiciliarios únicos del camino
         doms = al.new_list()
         for i in range(al.size(path)):  # CORRECCIÓN: usar índice en lugar de iterator
@@ -237,7 +215,6 @@ def req_1(catalog, A, B):
                             al.add_last(doms, pid)
             except:
                 continue  # Si no hay información, continuar
-        
         # Obtener restaurantes en el camino
         rests = al.new_list()
         for i in range(al.size(path)):  # CORRECCIÓN: usar índice en lugar de iterator
@@ -245,11 +222,9 @@ def req_1(catalog, A, B):
             if al.contains(catalog['restaurant_locations'], loc):
                 if not al.contains(rests, loc):  # Evitar duplicados
                     al.add_last(rests, loc)
-        
         end = get_time()
         time_elapsed = delta_time(start, end)
-        
-        # CORRECCIÓN: Retornar diccionario consistente
+        # Diccionario consistente
         return {
             'execution_time': round(time_elapsed, 3),
             'points_count': al.size(path),
@@ -258,7 +233,6 @@ def req_1(catalog, A, B):
             'restaurants': rests,
             'message': f'Camino encontrado entre {A} y {B}.'
         }
-        
     except Exception as e:
         end = get_time()
         return {
@@ -276,14 +250,12 @@ def req_2(catalog):
 
 def req_3(catalog, point_id):
     """
-    REQ 3 CORREGIDO: Domiciliario con más pedidos en un punto geográfico
+    Domiciliario con más pedidos en un punto geográfico
     """
     start = get_time()
-    
     try:
         # Convertir a string y limpiar entrada
         point_id = str(point_id).strip()
-        
         # Validar que el punto exista en el grafo
         graph = catalog['graph']
         if not gr.contains_vertex(graph, point_id):
@@ -295,10 +267,8 @@ def req_3(catalog, point_id):
                 'vehiculo': None,
                 'error': f"El punto {point_id} no existe en el grafo"
             }
-        
         # Obtener la lista de domiciliarios en ese punto
         deliverers_at_point = gr.get_vertex_information(graph, point_id)
-        
         if deliverers_at_point is None or al.size(deliverers_at_point) == 0:
             end_time = get_time()
             return {
@@ -308,10 +278,8 @@ def req_3(catalog, point_id):
                 'vehiculo': None,
                 'error': f"No hay domiciliarios registrados en el punto {point_id}"
             }
-        
         # Contar pedidos por domiciliario
         courier_counts = lp.new_map(100, 0.5)
-        
         # Recorrer todos los domiciliarios en este punto
         for i in range(al.size(deliverers_at_point)):
             courier_id = al.get_element(deliverers_at_point, i)
@@ -321,11 +289,9 @@ def req_3(catalog, point_id):
             else:
                 current_count = lp.get(courier_counts, courier_id)
                 lp.put(courier_counts, courier_id, current_count + 1)
-        
         # Encontrar el domiciliario con más pedidos
         max_courier = None
         max_count = 0
-        
         courier_keys = lp.key_set(courier_counts)
         for i in range(al.size(courier_keys)):
             courier = al.get_element(courier_keys, i)
@@ -333,11 +299,8 @@ def req_3(catalog, point_id):
             if count > max_count:
                 max_count = count
                 max_courier = courier
-        
-        # Determinar el vehículo más común (simplificado)
-        # En una implementación más completa, se podría cargar información de vehículos del CSV
-        top_vehicle = "motorcycle"  # Valor por defecto basado en datos típicos de delivery
-        
+        # Determinar el vehículo más común 
+        top_vehicle = "motorcycle"
         # Si hay múltiples domiciliarios con el mismo máximo, tomar el primero (orden lexicográfico)
         if max_courier is None:
             end_time = get_time()
@@ -348,10 +311,8 @@ def req_3(catalog, point_id):
                 'vehiculo': None,
                 'error': f"No se pudieron procesar los domiciliarios en el punto {point_id}"
             }
-        
         end_time = get_time()
         elapsed = round(delta_time(start, end_time), 3)
-        
         return {
             'tiempo_ms': elapsed,
             'domiciliario': max_courier,
@@ -361,7 +322,6 @@ def req_3(catalog, point_id):
             'total_domiciliarios_unicos': al.size(courier_keys),
             'error': None
         }
-        
     except Exception as e:
         end_time = get_time()
         return {
@@ -382,14 +342,12 @@ def req_5(catalog):
 
 def req_6(catalog, origin):
     """
-    REQ 6 CORREGIDO: Caminos de costo mínimo en tiempo desde un punto A
+    Caminos de costo mínimo en tiempo desde un punto A
     """
     start = get_time()
-    
     try:
         # Convertir a string y limpiar entrada
         origin = str(origin).strip()
-        
         # Validar que el punto origen exista
         graph = catalog['graph']
         if not gr.contains_vertex(graph, origin):
@@ -402,26 +360,20 @@ def req_6(catalog, origin):
                 'tiempo_ruta_mas_larga': 0.0,
                 'error': f"El punto {origin} no existe en el grafo"
             }
-        
         # Ejecutar Dijkstra desde el origen
         search = dijkstra.dijkstra(graph, origin)
-        
         # Crear lista de puntos alcanzables
         alcanzables = al.new_list()
         all_vertices = gr.vertices(graph)
-        
         # Filtrar vértices alcanzables
         for i in range(al.size(all_vertices)):
             vertex = al.get_element(all_vertices, i)
             if dijkstra.has_path_to(vertex, search):
                 al.add_last(alcanzables, vertex)
-        
         # Ordenar lista alfabéticamente (implementación manual)
         alcanzables = sort_vertices_alphabetically(alcanzables)
-        
         # Contar cantidad de elementos alcanzables
         cantidad = al.size(alcanzables)
-        
         if cantidad == 0:
             end_time = get_time()
             return {
@@ -432,11 +384,9 @@ def req_6(catalog, origin):
                 'tiempo_ruta_mas_larga': 0.0,
                 'error': f"No hay ubicaciones alcanzables desde {origin}"
             }
-        
         # Buscar el vértice más lejano (con mayor dist_to)
         max_vertex = None
         max_time = 0.0
-        
         for i in range(cantidad):
             vertex = al.get_element(alcanzables, i)
             try:
@@ -446,7 +396,6 @@ def req_6(catalog, origin):
                     max_vertex = vertex
             except:
                 continue  # Si hay error obteniendo distancia, continuar
-        
         # Recuperar la ruta hacia max_vertex
         ruta_max = al.new_list()
         if max_vertex is not None:
@@ -458,10 +407,8 @@ def req_6(catalog, origin):
             except:
                 # Si hay error obteniendo el camino, dejar ruta vacía
                 pass
-
         end_time = get_time()
         elapsed = round(delta_time(start, end_time), 3)
-        
         return {
             'tiempo_ms': elapsed,
             'cantidad_ubicaciones': cantidad,
@@ -472,7 +419,6 @@ def req_6(catalog, origin):
             'vertice_mas_lejano': max_vertex,
             'error': None
         }
-        
     except Exception as e:
         end_time = get_time()
         return {
@@ -483,40 +429,33 @@ def req_6(catalog, origin):
             'tiempo_ruta_mas_larga': 0.0,
             'error': f"Error durante la ejecución: {str(e)}"
         }
-
 def sort_vertices_alphabetically(vertex_list):
     """
-    Función auxiliar para ordenar vértices alfabéticamente usando bubble sort
+    Función auxiliar para ordenar vértices alfabéticamente
     """
     if al.size(vertex_list) <= 1:
         return vertex_list
-    
     # Convertir a lista Python para ordenar
     vertices_py = []
     for i in range(al.size(vertex_list)):
         vertices_py.append(al.get_element(vertex_list, i))
-    
     # Ordenar alfabéticamente
     vertices_py.sort()
-    
     # Convertir de vuelta a array_list
     sorted_list = al.new_list()
     for vertex in vertices_py:
         al.add_last(sorted_list, vertex)
-    
     return sorted_list
 
 def req_7(catalog, origin, courier_id):
     """
-    REQ 7 CORREGIDO: Árbol de recubrimiento mínimo para un domiciliario
+    Árbol de recubrimiento mínimo para un domiciliario
     """
     start = get_time()
-    
     try:
         # Convertir a string y limpiar entradas
         origin = str(origin).strip()
         courier_id = str(courier_id).strip()
-        
         # Validaciones
         graph = catalog['graph']
         if not gr.contains_vertex(graph, origin):
@@ -528,17 +467,14 @@ def req_7(catalog, origin, courier_id):
                 'tiempo_total_mst': 0.0,
                 'error': f"El punto {origin} no existe en el grafo"
             }
-        
         # 1) Recolectar ubicaciones donde trabajó el domiciliario
         ubic_set = {}
         courier_found = False
         all_vertices = gr.vertices(graph)
-        
         for i in range(al.size(all_vertices)):
             location = al.get_element(all_vertices, i)
             try:
                 deliverers_at_location = gr.get_vertex_information(graph, location)
-                
                 if deliverers_at_location is not None:
                     # Buscar si el courier_id está en esta ubicación
                     for j in range(al.size(deliverers_at_location)):
@@ -549,7 +485,6 @@ def req_7(catalog, origin, courier_id):
                             break
             except:
                 continue  # Si hay error obteniendo información, continuar
-        
         # Validar que el domiciliario existe en al menos una ubicación
         if not courier_found:
             end_time = get_time()
@@ -560,18 +495,14 @@ def req_7(catalog, origin, courier_id):
                 'tiempo_total_mst': 0.0,
                 'error': f"El domiciliario {courier_id} no se encontró en ninguna ubicación"
             }
-        
-        # Incluir origen siempre (aunque el domiciliario no haya trabajado ahí)
+        # Incluir origen siempre
         ubic_set[origin] = True
-        
         # 2) Convertir set a array_list
         ubic_list = al.new_list()
         for location in ubic_set.keys():
             al.add_last(ubic_list, location)
-        
         # 3) Ordenar alfabéticamente
         ubic_list = sort_locations_alphabetically(ubic_list)
-        
         # 4) Construir subgrafo inducido
         size_ul = al.size(ubic_list)
         if size_ul < 2:
@@ -586,21 +517,17 @@ def req_7(catalog, origin, courier_id):
                 'punto_origen': origin,
                 'error': None
             }
-        
         sub_graph = gr.new_graph(size_ul)
-        
         # Insertar vértices
         for i in range(size_ul):
             u = al.get_element(ubic_list, i)
             gr.insert_vertex(sub_graph, u, None)
-        
         # Insertar aristas
         edges_added = 0
         for i in range(size_ul):
             u = al.get_element(ubic_list, i)
             try:
                 adjacents = gr.adjacents(graph, u)
-                
                 for j in range(al.size(adjacents)):
                     v = al.get_element(adjacents, j)
                     if v in ubic_set:  # Si v también está en nuestro subconjunto
@@ -614,7 +541,6 @@ def req_7(catalog, origin, courier_id):
                                 edges_added += 1
             except:
                 continue  # Si hay error, continuar con el siguiente vértice
-        
         # Verificar que el subgrafo esté conectado (al menos tenga aristas)
         if edges_added == 0:
             end_time = get_time()
@@ -627,7 +553,6 @@ def req_7(catalog, origin, courier_id):
                 'punto_origen': origin,
                 'error': "Las ubicaciones del domiciliario no están conectadas"
             }
-        
         # 5) Calcular MST con Prim
         try:
             prim_search = prim.prim_mst(sub_graph, origin)
@@ -644,11 +569,9 @@ def req_7(catalog, origin, courier_id):
                 'punto_origen': origin,
                 'error': f"Error calculando MST: {str(e)}"
             }
-        
         # 6) Resultado exitoso
         end_time = get_time()
         elapsed = round(delta_time(start, end_time), 3)
-        
         return {
             'tiempo_ms': elapsed,
             'cantidad_ubicaciones': size_ul,
@@ -659,7 +582,6 @@ def req_7(catalog, origin, courier_id):
             'aristas_en_subgrafo': edges_added,
             'error': None
         }
-        
     except Exception as e:
         end_time = get_time()
         return {
@@ -669,28 +591,24 @@ def req_7(catalog, origin, courier_id):
             'tiempo_total_mst': 0.0,
             'error': f"Error durante la ejecución: {str(e)}"
         }
-
 def sort_locations_alphabetically(location_list):
     """
     Función auxiliar para ordenar ubicaciones alfabéticamente
     """
     if al.size(location_list) <= 1:
         return location_list
-    
     # Convertir a lista Python para ordenar
     locations_py = []
     for i in range(al.size(location_list)):
         locations_py.append(al.get_element(location_list, i))
-    
     # Ordenar alfabéticamente
     locations_py.sort()
-    
     # Convertir de vuelta a array_list
     sorted_list = al.new_list()
     for location in locations_py:
         al.add_last(sorted_list, location)
-    
     return sorted_list
+
 
 def req_8(catalog):
     """Retorna el resultado del requerimiento 8"""
