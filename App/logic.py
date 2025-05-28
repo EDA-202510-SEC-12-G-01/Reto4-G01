@@ -24,13 +24,7 @@ csv.field_size_limit(2147483647)
 default_limit = 1000000
 sys.setrecursionlimit(default_limit * 10)
 
-def get_time():
-    return float(time.perf_counter() * 1000)
-
-def delta_time(start, end):
-    return float(end - start)
-
-def new_logic(size=1):
+def new_logic(size = 1000):
     """
     Crea el catálogo para almacenar las estructuras de datos
     """
@@ -43,8 +37,7 @@ def new_logic(size=1):
         'delivery_locations': al.new_list(),
         'total_delivery_time': 0.0,
         'total_deliveries': 0,
-        'total_edges': 0,
-        'load_time': 0.0
+        'total_edges': 0
     }
     return catalog
 
@@ -55,13 +48,6 @@ def format_location(latitude, longitude):
         return f"{lat}_{lon}"
     except:
         return "0.0000_0.0000"
-
-def list_contains(lst, value):
-    """Comprueba si value está en el array_list lst."""
-    for element in lst['elements']:
-        if element == value:
-            return True
-    return False
 
 def load_data(catalog, filename):
     start = get_time()
@@ -75,9 +61,6 @@ def load_data(catalog, filename):
             dest        = format_location(row['Delivery_location_latitude'], row['Delivery_location_longitude'])
             pid         = row['Delivery_person_ID']
             t_taken     = float(row.get('Time_taken(min)', 0))
-
-            # ——— Nodos ———
-            # origen
             if not gr.contains_vertex(catalog['graph'], origin):
                 alist = al.new_list()
                 al.add_last(alist, pid)
@@ -85,7 +68,6 @@ def load_data(catalog, filename):
             else:
                 alist = gr.get_vertex_information(catalog['graph'], origin)
                 al.add_last(alist, pid)
-            # destino
             if not gr.contains_vertex(catalog['graph'], dest):
                 alist = al.new_list()
                 al.add_last(alist, pid)
@@ -94,21 +76,16 @@ def load_data(catalog, filename):
                 alist = gr.get_vertex_information(catalog['graph'], dest)
                 al.add_last(alist, pid)
 
-            # ——— Contadores ———
             catalog['total_deliveries']      += 1
             catalog['total_delivery_time']   += t_taken
-            # domiciliario único
             if not lp.contains(persons_map, pid):
                 lp.put(persons_map, pid, True)
 
-            # ubicaciones únicas de restaurantes y destinos
-            if not list_contains(catalog['restaurant_locations'], origin):
+            if not al.contains(catalog['restaurant_locations'], origin):
                 al.add_last(catalog['restaurant_locations'], origin)
-            if not list_contains(catalog['delivery_locations'], dest):
+            if not al.contains(catalog['delivery_locations'], dest):
                 al.add_last(catalog['delivery_locations'], dest)
 
-            # ——— Arcos (no dirigidos) ———
-            # principal: origen <-> destino
             e = gr.get_edge(catalog['graph'], origin, dest)
             if e is None:
                 avg = t_taken
@@ -118,7 +95,6 @@ def load_data(catalog, filename):
             gr.add_edge(catalog['graph'], origin, dest, avg)
             gr.add_edge(catalog['graph'], dest, origin, avg)
 
-            # arco entre entregas consecutivas de un mismo domiciliario
             prev_dest = lp.get(catalog['domiciliarios_ultimos_destinos'], pid)
             prev_time = lp.get(catalog['domiciliarios_ultimos_tiempos'], pid)
             if prev_dest and prev_dest != dest:
@@ -135,10 +111,6 @@ def load_data(catalog, filename):
 
             lp.put(catalog['domiciliarios_ultimos_destinos'], pid, dest)
             lp.put(catalog['domiciliarios_ultimos_tiempos'], pid, t_taken)
-
-    catalog['load_time'] = delta_time(start, get_time())
-
-    # ——— Resultados ———
     total_doms    = catalog['total_deliveries']
     total_persons = lp.size(persons_map)
     total_nodes   = gr.order(catalog['graph'])
@@ -146,8 +118,9 @@ def load_data(catalog, filename):
     total_rest    = al.size(catalog['restaurant_locations'])
     total_dloc    = al.size(catalog['delivery_locations'])
     avg_time      = (catalog['total_delivery_time'] / total_doms) if total_doms > 0 else 0.0
-
-    return total_doms, total_persons, total_nodes, total_edges, total_rest, total_dloc, avg_time
+    end_time = get_time()
+    time = delta_time(start, end_time)
+    return total_doms, total_persons, total_nodes, total_edges, total_rest, total_dloc, avg_time, time
 
 # Funciones de requerimientos restantes (placeholder)
 def req_1(catalog, A, B):
@@ -191,8 +164,3 @@ def delta_time(start, end):
     """devuelve la diferencia entre tiempos de procesamiento muestreados"""
     elapsed = float(end - start)
     return elapsed
-
-catalog = new_logic(1)
-
-print(load_data(catalog, "deliverytime_100.csv"))
-
