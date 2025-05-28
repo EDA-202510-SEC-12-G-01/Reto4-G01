@@ -11,9 +11,10 @@ from DataStructures.List.list_iterator import iterator
 from DataStructures.List import array_list as lt 
 from DataStructures.Map import map_linear_probing as mp 
 from DataStructures.Graph import udgraph as gr 
-from DataStructures.Graph import bfs as bfs_alg 
+from DataStructures.Graph import bfs as bfs
 from DataStructures.Graph import dfs 
-from DataStructures.Stack import stack as st 
+from DataStructures.Stack import stack as st
+from DataStructures.Queue import queue as qu
 from DataStructures.Graph import dijkstra 
 from DataStructures.List import single_linked_list as sll 
 from DataStructures.Graph import prim 
@@ -318,9 +319,71 @@ def req_3(catalog, point_id):
         
         
         
-def req_4(catalog):
-    """Retorna el resultado del requerimiento 4"""
-    pass
+def req_4(catalog, A, B):
+    """Retorna el resultado del requerimiento 4 de forma determinista usando solo TAD del curso."""
+    start = get_time()
+
+    if not gr.contains_vertex(catalog['graph'], A) or not gr.contains_vertex(catalog['graph'], B):
+        elapsed = round(delta_time(start, get_time()), 3)
+        empty = al.new_list()
+        return elapsed, empty, empty
+
+    order = gr.order(catalog['graph'])
+    visited = mp.new_map(order, 0.5)
+    parent  = mp.new_map(order, 0.5)
+    q = qu.new_queue()
+
+    mp.put(visited, A, True)
+    mp.put(parent,  A, None)
+    qu.enqueue(q, A)
+
+    found = False
+    while not qu.is_empty(q):
+        u = qu.dequeue(q)
+        if u == B:
+            found = True
+            break
+        neighs = gr.adjacents(catalog['graph'], u)
+        al.selection_sort(neighs, al.default_sort_criteria)
+        for v in iterator(neighs):
+            if not mp.contains(visited, v):
+                mp.put(visited, v, True)
+                mp.put(parent,  v, u)
+                qu.enqueue(q, v)
+
+    if not found:
+        elapsed = round(delta_time(start, get_time()), 3)
+        empty = al.new_list()
+        return elapsed, empty, empty
+    path_stack = st.new_stack()
+    cur = B
+    while cur is not None:
+        st.push(path_stack, cur)
+        cur = mp.get(parent, cur)
+    path_alist = al.new_list()
+    while not st.is_empty(path_stack):
+        al.add_last(path_alist, st.pop(path_stack))
+
+    common = None
+    for loc in iterator(path_alist):
+        info = gr.get_vertex_information(catalog['graph'], loc) or al.new_list()
+        if common is None:
+            common = al.new_list()
+            for pid in iterator(info):
+                if not al.contains(common, pid):
+                    al.add_last(common, pid)
+        else:
+            filtered = al.new_list()
+            for pid in iterator(common):
+                if al.contains(info, pid):
+                    al.add_last(filtered, pid)
+            common = filtered
+
+    if common is None:
+        common = al.new_list()
+
+    elapsed = round(delta_time(start, get_time()), 3)
+    return elapsed, path_alist, common
 
 
 
