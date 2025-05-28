@@ -134,22 +134,21 @@ def req_1(catalog, A, B):
         return {
             'execution_time': delta_time(start, end),
             'points_count': 0,
-            'path': [],
-            'domiciliarios': [],
-            'restaurants': [],
+            'path': al.new_list(),
+            'domiciliarios': al.new_list(),
+            'restaurants': al.new_list(),
             'message': f'No existe un camino entre {A} y {B}.'
         }
 
     search = dfs.dfs(catalog['graph'], A)
-
     if not dfs.has_path_to(B, search):
         end = get_time()
         return {
             'execution_time': delta_time(start, end),
             'points_count': 0,
-            'path': [],
-            'domiciliarios': [],
-            'restaurants': [],
+            'path': al.new_list(),
+            'domiciliarios': al.new_list(),
+            'restaurants': al.new_list(),
             'message': f'No hay conexión entre {A} y {B}.'
         }
 
@@ -159,24 +158,21 @@ def req_1(catalog, A, B):
         al.add_last(path, stk.pop(path_stack))
 
     doms = al.new_list()
+    for loc in iterator(path):
+        pids_list = gr.get_vertex_information(catalog['graph'], loc)
+        for i in range(al.size(pids_list)):
+            pid = al.get_element(pids_list, i)
+            if not al.contains(doms, pid):
+                al.add_last(doms, pid)
+
     rests = al.new_list()
     for loc in iterator(path):
-        info = lp.get(catalog['nodes'], loc)
-        if info:
-            for d in info['domiciliarios']:
-                al.add_last(doms, d)
         if al.contains(catalog['restaurant_locations'], loc):
             al.add_last(rests, loc)
 
-
     end = get_time()
-    return {
-        'execution_time': delta_time(start, end),
-        'points_count': al.size(path),
-        'path': path,
-        'domiciliarios': doms,
-        'restaurants': rests
-    }
+    time = delta_time(start, end)
+    return round(time, 3), al.size(path), path, doms, rests
 
 
 def req_2(catalog):
@@ -221,5 +217,4 @@ def delta_time(start, end):
 catalog = new_logic(1)
 
 load_data(catalog, "deliverytime_min.csv")
-print(catalog['graph'])
 print(req_1(catalog, "22.7452_75.9161", "22.7352_75.9061"))
