@@ -419,7 +419,3 @@ def delta_time(start, end):
     return elapsed
 
 
-catalog = new_logic(1)
-
-load_data(catalog, "deliverytime_min.csv")
-print(req_1(catalog, "22.7452_75.9161", "22.7352_75.9061"))

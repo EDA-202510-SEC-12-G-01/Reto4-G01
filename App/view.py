@@ -61,8 +61,21 @@ def print_req_1(control):
     """
         Función que imprime la solución del Requerimiento 1 en consola
     """
-    # TODO: Imprimir el resultado del requerimiento 1
-    pass
+    # Pide al usuario origen y destino
+    origen = input("Ingrese punto geográfico de origen (e.g. 22.7446_75.8944): ")
+    destino = input("Ingrese punto geográfico de destino (e.g. 22.8246_75.9744): ")
+    resultado = logic.req_1(control, origen, destino)
+    # Preparar tabla
+    table = [
+        ["Tiempo (ms)", resultado['tiempo_ms']],
+        ["# Nodos en camino", resultado['nodos']],
+        ["Camino", " → ".join(resultado['camino'])],
+        ["Domiciliarios únicos", ", ".join(resultado['couriers'])],
+        ["Restaurantes en ruta", ", ".join(resultado['restaurants'])]
+    ]
+    print("\n--- Resultado Requerimiento 1 ---")
+    print(tb.tabulate(table, tablefmt="grid"))
+    print()
 
 
 def print_req_2(control):
@@ -77,8 +90,17 @@ def print_req_3(control):
     """
         Función que imprime la solución del Requerimiento 3 en consola
     """
-    # TODO: Imprimir el resultado del requerimiento 3
-    pass
+    point = input("Ingrese punto geográfico (e.g. 22.7446_75.8944): ")
+    resultado = logic.req_3(control, point)
+    table = [
+        ["Tiempo (ms)", resultado['tiempo_ms']],
+        ["Domiciliario más activo", resultado['domiciliario']],
+        ["# Pedidos en punto", resultado['pedidos']],
+        ["Tipo de vehículo más usado", resultado['vehiculo']]
+    ]
+    print("\n--- Resultado Requerimiento 3 ---")
+    print(tb.tabulate(table, tablefmt="grid"))
+    print()
 
 
 def print_req_4(control):
@@ -101,16 +123,38 @@ def print_req_6(control):
     """
         Función que imprime la solución del Requerimiento 6 en consola
     """
-    # TODO: Imprimir el resultado del requerimiento 6
-    pass
+    origen = input("Ingrese punto geográfico de origen (e.g. 22.7446_75.8944): ")
+    resultado = logic.req_6(control, origen)
+    # Mostrar alcanzables en columnas de a 5
+    alcanz = resultado['alcanzables']
+    grupos = [alcanz[i:i+5] for i in range(0, len(alcanz), 5)]
+    print("\n--- Resultado Requerimiento 6 ---")
+    print(f"Tiempo (ms): {resultado['tiempo_ms']}")
+    print(f"# Ubicaciones alcanzables: {resultado['cantidad_ubicaciones']}")
+    print("Alcanzables:")
+    for grupo in grupos:
+        print("  " + ", ".join(grupo))
+    print(f"\nRuta de mayor tiempo mínimo ({resultado['tiempo_ruta_mas_larga']}):")
+    print("  " + " → ".join(resultado['ruta_mas_larga']))
+    print()
 
 
 def print_req_7(control):
     """
         Función que imprime la solución del Requerimiento 7 en consola
     """
-    # TODO: Imprimir el resultado del requerimiento 7
-    pass
+    origen = input("Ingrese punto geográfico de origen (e.g. 22.7446_75.8944): ")
+    cid    = input("Ingrese ID del domiciliario (e.g. INDORES16DEL02): ")
+    resultado = logic.req_7(control, origen, cid)
+    table = [
+        ["Tiempo (ms)", resultado['tiempo_ms']],
+        ["# Ubicaciones en sub-red", resultado['cantidad_ubicaciones']],
+        ["Total tiempo MST", resultado['tiempo_total_mst']],
+        ["Ubicaciones (alfab.)", ", ".join(resultado['ubicaciones'])]
+    ]
+    print("\n--- Resultado Requerimiento 7 ---")
+    print(tb.tabulate(table, tablefmt="grid"))
+    print()
 
 
 def print_req_8(control):
